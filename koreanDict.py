@@ -14,6 +14,7 @@ def search(key,query):
     tic = time.perf_counter()
     r = requests.get(url = URL, params = PARAMS, verify=certifi.where())
     toc = time.perf_counter()
+
     if r.status_code != 200:
         print("error in fetching data from krdict.korean.go.kr/api")
         return r.raise_for_status
@@ -39,4 +40,5 @@ def search(key,query):
         
     timePass = toc-tic
     print("time for request:",timePass)
+
     return entry 
