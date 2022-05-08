@@ -7,7 +7,7 @@ import urllib3
 BASE_URL = "https://krdict.korean.go.kr/api/search?"
 http = urllib3.PoolManager(
     cert_reqs='CERT_REQUIRED',
-    ca_certs=certifi.where())
+    ca_certs="certs/cacert.pem")
 
 def search(key,query):
     #PARAMS = {'key': key,
