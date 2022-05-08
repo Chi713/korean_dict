@@ -1,37 +1,34 @@
-#import requests
+import requests
 import certifi
 import xml.etree.ElementTree as ET
 import time
-import urllib3
+#import urllib3
 
 BASE_URL = "https://krdict.korean.go.kr/api/search?"
-http = urllib3.PoolManager(
-    cert_reqs='CERT_REQUIRED',
-    ca_certs="certs/cacert.pem")
+#http = urllib3.PoolManager(
+    #cert_reqs='CERT_REQUIRED',
+    #ca_certs=certifi.where())
 
 def search(key,query):
-    #PARAMS = {'key': key,
-        #'q': query,
-        #'translated': 'y',
-        #'trans_lang': '1'}
-
-    
-    URL = BASE_URL + "key=" + key + "&q=" + query + "&translated=y&trans_lang=1"
+    PARAMS = {'key': key,
+        'q': query,
+        'translated': 'y',
+        'trans_lang': '1'}
+   
+    #URL = BASE_URL + "key=" + key + "&q=" + query + "&translated=y&trans_lang=1"
     #print(URL)
-
+    #r = http.request('GET', URL)
 
     tic = time.perf_counter()
-    r = http.request('GET', URL)
+    r = requests.get(url = BASE_URL, params = PARAMS, verify=certifi.where())
     toc = time.perf_counter()
 
-    #r = requests.get(url = URL, params = PARAMS, verify=certifi.where())
+    if r.status_code != 200:
+        print("error in fetching data from krdict.korean.go.kr/api")
+        return r.raise_for_status
 
-    #if r.status_code != 200:
-        #print("error in fetching data from krdict.korean.go.kr/api")
-        #return r.raise_for_status
-
-    data = r.data.decode('UTF-8').strip()
-    #data = r.content.decode('UTF-8').strip()
+   #data = r.data.decode('UTF-8').strip()
+    data = r.content.decode('UTF-8').strip()
     root = ET.fromstring(data)
     word = ""
     defi = []
