@@ -31,7 +31,7 @@ RUN pip install requests certifi prettyprint
 WORKDIR /workspace/korean_dict_py
 RUN touch .apikey
 
-RUN cat krdict.pem >> /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem
+RUN cat certs/krdict.pem >> /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem
 RUN cp /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem certs/
 #CMD ["python", "/workspace/korean_dict_py/testSSL.py"]
 CMD ["python", "/workspace/korean_dict_py/index.py"]
