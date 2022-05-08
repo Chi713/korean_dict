@@ -12,7 +12,7 @@ def search(key,query):
         'trans_lang': '1'}
 
     tic = time.perf_counter()
-    r = requests.get(url = URL, params = PARAMS, verify=False)
+    r = requests.get(url = URL, params = PARAMS, verify=certifi.where())
     toc = time.perf_counter()
 
     if r.status_code != 200:
