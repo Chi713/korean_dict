@@ -1,14 +1,13 @@
 FROM pytorch/pytorch:latest
 
-RUN apt-get update && apt-get install -y build-essential git ca-certificates libssl-dev libffi-dev gnupg
-RUN apt-get install -y curl openssl 
+RUN apt-get update && apt-get install -y build-essential git curl openssl
 RUN git clone https://github.com/Chi713/korean_dict_py.git
 RUN git clone https://github.com/kakao/khaiii.git
 WORKDIR /workspace/khaiii
 
-RUN pip install cython
+RUN pip install cython cmake
 RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+#RUN pip install -r requirements.txt
 
 RUN mkdir build
 WORKDIR /workspace/khaiii/build
@@ -29,7 +28,7 @@ RUN update-locale LANG=en_US.UTF-8
 
 RUN pip install requests certifi prettyprint
 WORKDIR /workspace/korean_dict_py
-RUN touch .apikey
+#RUN touch .apikey
 
 RUN cat certs/krdict.pem >> /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem
 RUN cp /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem certs/
