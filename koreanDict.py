@@ -1,9 +1,6 @@
-#import requests
 import certifi
 import xml.etree.ElementTree as ET
-#import time
 import ssl
-#import asyncio
 import aiohttp
 
 #query = "나무"
@@ -16,6 +13,7 @@ BASE_URL = "https://krdict.korean.go.kr/api/search?"
 
 sslcontext = ssl.create_default_context(
     cafile = certifi.where())
+sslcontext.load_verify_locations("./certs/krdict.pem")
 
 async def fetch(session, params):
     global BASE_URL
@@ -30,19 +28,7 @@ async def search(key,query):
         'translated': 'y',
         'trans_lang': '1'}
     
-    async with aiohttp.ClientSession() as session:
-        data = await fetch(session, PARAMS)
-
-
-    #tic = time.perf_counter()
-    #r = requests.get(url = BASE_URL, params = PARAMS, verify=certifi.where())
-    #toc = time.perf_counter()
-
-    #if r.status_code != 200:
-        #print("error in fetching data from krdict.korean.go.kr/api")
-        #return r.raise_for_status
-
-        #data = str(r.read()).decode('UTF-8').strip()
+    async def parse(data):
         root = ET.fromstring(data)
         word = ""
         defi = []
@@ -59,7 +45,41 @@ async def search(key,query):
 
         entry = {'word': word,
             'definition': defi,
-            'explaination': expl}
+        }
+
+        return entry
+
+    async with aiohttp.ClientSession() as session:
+        data = await fetch(session, PARAMS)
+        return await parse(data)
+
+
+    #tic = time.perf_counter()
+    #r = requests.get(url = BASE_URL, params = PARAMS, verify=certifi.where())
+    #toc = time.perf_counter()
+
+    #if r.status_code != 200:
+        #print("error in fetching data from krdict.korean.go.kr/api")
+        #return r.raise_for_status
+
+        #data = str(r.read()).decode('UTF-8').strip()
+        #root = ET.fromstring(data)
+        #word = ""
+        #defi = []
+        #expl = []
+        #flag = True
+
+        #for branch in root[7:]:
+            #for middle in [x for x in branch if x.tag == 'sense' and flag]:
+                #for child in [x for x in middle if x.tag == 'translation']:
+                    #word = branch[1].text
+                    #defi.append(str(child[1].text).strip())
+                    #expl.append(str(child[2].text).strip())
+                    #flag = False
+
+        #entry = {'word': word,
+            #'definition': defi,
+            #'explaination': expl}
         
         #print(entry)
 
