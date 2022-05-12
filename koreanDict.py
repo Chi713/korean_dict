@@ -1,91 +1,52 @@
-import certifi
+#import certifi
 import xml.etree.ElementTree as ET
-import ssl
+#import ssl
 import aiohttp
 
-#query = "나무"
-
-#f = open(".apikey")
-#API_KEY = f.read().strip("API_KEY=").strip()
-#f.close()
-
-BASE_URL = "https://krdict.korean.go.kr/api/search?"
-
-sslcontext = ssl.create_default_context(
-    cafile = certifi.where())
-sslcontext.load_verify_locations("./certs/krdict.pem")
-
-async def fetch(session, params):
-    global BASE_URL
-    global sslcontext
-    async with session.get(BASE_URL, params=params, ssl=sslcontext) as r:
-        return await r.read()
-
-async def search(key,query):
-
-    PARAMS = {'key': key,
-        'q': query,
-        'translated': 'y',
-        'trans_lang': '1'}
+class Session:
+    BASE_URL = "https://krdict.korean.go.kr/api/search?"
     
-    async def parse(data):
-        root = ET.fromstring(data)
-        word = ""
-        defi = []
-        expl = []
-        flag = True
+    #create complete ssl certification path using intermediate cert
+    #sslcontext = ssl.create_default_context(cafile = certifi.where())
+    #sslcontext.load_verify_locations("./certs/krdict.pem")
 
-        for branch in root[7:]:
-            for middle in [x for x in branch if x.tag == 'sense' and flag]:
-                for child in [x for x in middle if x.tag == 'translation']:
-                    word = branch[1].text
-                    defi.append(str(child[1].text).strip())
-                    expl.append(str(child[2].text).strip())
-                    flag = False
+    def __init__(self, key, sslcontext):
+        self.key = key
+        self.sslcontext = sslcontext
 
-        entry = {'word': word,
-            'definition': defi,
-        }
+    async def search(self, query):
 
-        return entry
+        PARAMS = {'key': self.key,
+            'q': query,
+            'translated': 'y',
+            'trans_lang': '1'} 
 
-    async with aiohttp.ClientSession() as session:
-        data = await fetch(session, PARAMS)
-        return await parse(data)
+        #GET request from krdict.go.kr API
+        async def fetch(session, params):
+            async with session.get(self.BASE_URL, params=params, ssl=self.sslcontext) as r:
+                return await r.read()
 
+        async def parse(data):
+            root = ET.fromstring(data)
+            word = str()
+            defi = []
+            expl = []
 
-    #tic = time.perf_counter()
-    #r = requests.get(url = BASE_URL, params = PARAMS, verify=certifi.where())
-    #toc = time.perf_counter()
+            for branch in [x for x in root[7:] if x[1].text == query]:
+                for middle in [x for x in branch if x.tag == 'sense']:
+                    for child in [x for x in middle if x.tag == 'translation']:
+                        word = branch[1].text
+                        defi.append(str(child[1].text).strip())
+                        expl.append(str(child[2].text).strip())
+
+            return {'word': word,
+                'definition': defi,
+                'explaination': expl,}
+
+        async with aiohttp.ClientSession() as session:
+            data = await fetch(session, PARAMS)
+            return await parse(data)
 
     #if r.status_code != 200:
         #print("error in fetching data from krdict.korean.go.kr/api")
         #return r.raise_for_status
-
-        #data = str(r.read()).decode('UTF-8').strip()
-        #root = ET.fromstring(data)
-        #word = ""
-        #defi = []
-        #expl = []
-        #flag = True
-
-        #for branch in root[7:]:
-            #for middle in [x for x in branch if x.tag == 'sense' and flag]:
-                #for child in [x for x in middle if x.tag == 'translation']:
-                    #word = branch[1].text
-                    #defi.append(str(child[1].text).strip())
-                    #expl.append(str(child[2].text).strip())
-                    #flag = False
-
-        #entry = {'word': word,
-            #'definition': defi,
-            #'explaination': expl}
-        
-        #print(entry)
-
-    #timePass = toc-tic
-    #print("time for request:",timePass)
-
-#asyncio.run(search(API_KEY, query))
-
-        #return entry 
