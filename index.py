@@ -3,11 +3,10 @@ import parser
 import pprint
 import os
 import asyncio
-#import time
 import certifi
 import ssl
-from timePass import timer
-#import timeit
+import cProfile
+import pstats
 
 async def main():
 
@@ -15,9 +14,8 @@ async def main():
     if "API_KEY" in os.environ:
         API_KEY = os.environ['API_KEY']
     else:
-        f = open(".apikey")
-        API_KEY = f.read().strip("API_KEY=").strip()
-        f.close()
+        with open(".apikey") as f:
+            API_KEY = f.read().strip("API_KEY=").strip()
 
     #create complete ssl certification path using intermediate cert
     sslcontext = ssl.create_default_context(cafile = certifi.where())
@@ -25,6 +23,9 @@ async def main():
 
     krdict = koreanDict.Session(API_KEY, sslcontext)
     p = parser.Parser('khaiii')
+    #p2 = parser.komoranParse()
+    #print(p)
+    #print(p2)
 
     #query = "나무"
     #test_sentence = '제 친구 정우가 공항에서 저와 줄리아를 기다리고 있었어요.'
@@ -45,6 +46,8 @@ async def main():
     pprint.pprint(entry)
 
 if __name__ == '__main__':
-    @timer()
-    def func():
+    with cProfile.Profile() as pr:
         asyncio.run(main())
+    stats = pstats.Stats(pr)
+    stats.sort_stats(pstats.SortKey.TIME)
+    stats.print_stats()

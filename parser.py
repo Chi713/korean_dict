@@ -1,15 +1,16 @@
 from khaiii import KhaiiiApi
 from konlpy.tag import Komoran
+#import time
+
 def Parser(parser = 'komoran'):
 
-    if parser == 'khaiii':
-        return khaiiiParse()
-    else: 
-        return komoranParse()
+    return khaiiiParse() if parser == 'khaiii' else komoranParse()
 
 class khaiiiParse:
     api = KhaiiiApi()
+
     def parse(self, text):
+        #tic = time.perf_counter()
         exceptionTags = ['NNP','NP','VX']
         morphemes = []
         tags = []
@@ -24,11 +25,14 @@ class khaiiiParse:
 
         sentence = {'morpheme': morphemes,
             'tag': tags}
-
+        #toc = time.perf_counter()
+        #print(toc-tic)
         return sentence
 class komoranParse:
     api = Komoran()
+    
     def parse(self, text):
+        #tic = time.perf_counter()
         exceptionTags = ['JKB','ETM','JKO','JKG','JKS','EC','EP','EF','SF','SE','XSV','XPN','VX']
         morphemes = []
         tags = []
@@ -42,5 +46,6 @@ class komoranParse:
 
         sentence = {'morpheme': morphemes,
             'tags': tags}
-
+        #toc = time.perf_counter()
+        #print(toc-tic)
         return sentence
