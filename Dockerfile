@@ -1,8 +1,8 @@
 FROM pytorch/pytorch:latest
 
 RUN apt-get update && apt-get install -y build-essential git curl openssl
-RUN git clone https://github.com/Chi713/korean_dict_py.git
-RUN git clone https://github.com/kakao/khaiii.git
+#RUN git clone https://github.com/Chi713/korean_dict_py.git
+RUN git clone https://github.com/Chi713/khaiii.git
 WORKDIR /workspace/khaiii
 
 RUN pip install cython cmake
@@ -26,12 +26,14 @@ RUN apt-get install -y language-pack-ko
 RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
-RUN pip install requests certifi prettyprint
+RUN pip install certifi prettyprint aiohttp
+RUN mkdir /workspace/korean_dict_py
 WORKDIR /workspace/korean_dict_py
+COPY .. .
 #RUN touch .apikey
 
-RUN cat certs/krdict.pem >> /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem
-RUN cp /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem certs/
+#RUN cat certs/krdict.pem >> /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem
+#RUN cp /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem certs/
 #CMD ["python", "/workspace/korean_dict_py/testSSL.py"]
 CMD ["python", "/workspace/korean_dict_py/index.py"]
 #CMD ["ls","/workspace/korean_dict_py"]

@@ -5,10 +5,6 @@ import aiohttp
 
 class Session:
     BASE_URL = "https://krdict.korean.go.kr/api/search?"
-    
-    #create complete ssl certification path using intermediate cert
-    #sslcontext = ssl.create_default_context(cafile = certifi.where())
-    #sslcontext.load_verify_locations("./certs/krdict.pem")
 
     def __init__(self, key, sslcontext):
         self.key = key
@@ -28,18 +24,18 @@ class Session:
 
         async def parse(data):
             root = ET.fromstring(data)
-            word = str()
+            #word = query
             defi = []
             expl = []
 
             for branch in [x for x in root[7:] if x[1].text == query]:
                 for middle in [x for x in branch if x.tag == 'sense']:
                     for child in [x for x in middle if x.tag == 'translation']:
-                        word = branch[1].text
+                        #word = branch[1].text
                         defi.append(str(child[1].text).strip())
                         expl.append(str(child[2].text).strip())
 
-            return {'word': word,
+            return {'word': query,
                 'definition': defi,
                 'explaination': expl,}
 
