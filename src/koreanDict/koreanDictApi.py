@@ -1,5 +1,5 @@
-import koreanDict
-import parser
+from . import search
+from . import parser
 import pprint
 import os
 import asyncio
@@ -10,18 +10,21 @@ import pstats
 
 async def main():
 
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
     #fetch apikey
     if "API_KEY" in os.environ:
         API_KEY = os.environ['API_KEY']
     else:
-        with open(".apikey") as f:
+        
+        with open(PROJECT_ROOT + "/.apikey") as f:
             API_KEY = f.read().strip("API_KEY=").strip()
 
     #create complete ssl certification path using intermediate cert
     sslcontext = ssl.create_default_context(cafile = certifi.where())
-    sslcontext.load_verify_locations("./certs/krdict.pem")
+    sslcontext.load_verify_locations(PROJECT_ROOT + "/certs/krdict.pem")
 
-    krdict = koreanDict.Session(API_KEY, sslcontext)
+    krdict = search.Session(API_KEY, sslcontext)
     p = parser.Parser('khaiii')
     #p2 = parser.komoranParse()
     #print(p)
@@ -46,6 +49,7 @@ async def main():
     pprint.pprint(entry)
 
 if __name__ == '__main__':
+    print(os.path.abspath(__file__))
     with cProfile.Profile() as pr:
         asyncio.run(main())
     stats = pstats.Stats(pr)
