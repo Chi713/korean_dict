@@ -1,38 +1,50 @@
-from khaiii import KhaiiiApi
+from typing import Optional
 from konlpy.tag import Komoran
-#import time
 
-def Parser(parser = 'komoran'):
+#optional khaiii package import
+KhaiiiApi: Optional[type] = None
+try:
+    #import obviously_not_real_package_used_for_testing
+    from khaiii import KhaiiiApi 
+except ImportError as err:
+    print(f"module {err} not installed.\nUsing default parser")
+    pass
 
-    return khaiiiParse() if parser == 'khaiii' else komoranParse()
+def Parser(parser: str = 'komoran'):
 
-class khaiiiParse:
-    api = KhaiiiApi()
+    if parser == 'khaiii' and KhaiiiApi != None:
+        print('using khaiii')
+        return khaiiiParse()
+    else:
+        print("using komoran")
+        return komoranParse()
 
-    def parse(self, text):
-        #tic = time.perf_counter()
-        exceptionTags = ['NNP','NP','VX']
-        morphemes = []
-        tags = []
+#class is under if statement to satisfy static type checking and TypeError being thrown at runtime
+if KhaiiiApi != None:
+    class khaiiiParse:
+        api = KhaiiiApi()
 
-        for entry in [x for x in self.api.analyze(text) if x.morphs[0].tag not in exceptionTags]:
-            word = entry.morphs[0].lex
-            tag = entry.morphs[0].tag
-            if 'V' in tag[0]:
-                word = word + '다'
-            morphemes.append(word)
-            tags.append(tag)
+        def parse(self, text: str):
+            exceptionTags = ['NNP','NP','VX']
+            morphemes = []
+            tags = []
 
-        sentence = {'morpheme': morphemes,
-            'tag': tags}
-        #toc = time.perf_counter()
-        #print(toc-tic)
-        return sentence
-class komoranParse:
+            for entry in [x for x in self.api.analyze(text) if x.morphs[0].tag not in exceptionTags]:
+                word = entry.morphs[0].lex
+                tag = entry.morphs[0].tag
+                if 'V' in tag[0]:
+                    word = word + '다'
+                morphemes.append(word)
+                tags.append(tag)
+
+            sentence = {'morpheme': morphemes,
+                'tag': tags}
+            return sentence
+
+class komoranParse: 
     api = Komoran()
     
-    def parse(self, text):
-        #tic = time.perf_counter()
+    def parse(self, text: str):
         exceptionTags = ['JKB','ETM','JKO','JKG','JKS','EC','EP','EF','SF','SE','XSV','XPN','VX']
         morphemes = []
         tags = []
@@ -44,8 +56,6 @@ class komoranParse:
             morphemes.append(word)
             tags.append(tag)
 
-        sentence = {'morpheme': morphemes,
+        sentence: dict = {'morpheme': morphemes,
             'tags': tags}
-        #toc = time.perf_counter()
-        #print(toc-tic)
         return sentence
