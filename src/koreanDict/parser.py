@@ -1,5 +1,6 @@
 from typing import Optional
 from konlpy.tag import Komoran
+from dataclasses import dataclass
 
 #optional khaiii package import
 KhaiiiApi: Optional[type] = None
@@ -19,6 +20,11 @@ def Parser(parser: str = 'komoran'):
         print("using komoran")
         return komoranParse()
 
+@dataclass(frozen=True, order=True)
+class sentence:
+    morphemes: list
+    tags: list
+
 #class is under if statement to satisfy static type checking and TypeError being thrown at runtime
 if KhaiiiApi != None:
     class khaiiiParse:
@@ -37,9 +43,7 @@ if KhaiiiApi != None:
                 morphemes.append(word)
                 tags.append(tag)
 
-            sentence = {'morpheme': morphemes,
-                'tag': tags}
-            return sentence
+            return sentence(morphemes, tags)
 
 class komoranParse: 
     api = Komoran()
@@ -56,6 +60,4 @@ class komoranParse:
             morphemes.append(word)
             tags.append(tag)
 
-        sentence: dict = {'morpheme': morphemes,
-            'tags': tags}
-        return sentence
+        return sentence(morphemes, tags)

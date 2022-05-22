@@ -33,7 +33,7 @@ async def main(tsv_file: str):
 
     cp = csvParser.csvParse()
     data = cp.parse(PROJECT_ROOT / tsv_file)
-    sentence = data[1][4]
+    sentence = data[1]['TL']
     
     entry = list()
     word = list()
@@ -42,7 +42,7 @@ async def main(tsv_file: str):
     p = parser.Parser('khaiii')
 
     data = p.parse(sentence)
-    for morph in data['morpheme']:
+    for morph in data.morphemes:
         resp = asyncio.create_task(krdict.search(morph))
         word.append(resp)
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
         cp = csvParser.csvParse()
         data = cp.parse(PROJECT_ROOT / "resources/bite_sisters.tsv")
-        test_sentence = data[1][4]
+        test_sentence = data[1]['TL']
 
         asyncio.run(main(test_sentence))
     stats = pstats.Stats(pr)

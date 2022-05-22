@@ -23,4 +23,3 @@ if __name__ == '__main__':
     #stats = pstats.Stats(pr)
     #stats.sort_stats(pstats.SortKey.TIME)
     #stats.print_stats()
-#asyncio.run(kr.main(test_sentence))
