@@ -11,3 +11,7 @@ reqwest = "0.11"
 futures = "0.3"                                # for our async / await blocks
 tokio = { version = "1", features = ["full"] } # for our async runtime
 roxmltree = "0.14"
+
+[dependencies.pyo3]
+version = "0.16.5"
+features = ["auto-initialize"]

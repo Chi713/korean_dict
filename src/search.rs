@@ -52,18 +52,18 @@ impl Session {
         api_key
     }
 
-    pub async fn get(&self, query: String) -> Entry {
+    pub async fn get(&self, query: String) -> Result<Entry, reqwest::Error> {
         let url = format!(
             "https://krdict.korean.go.kr/api/search?key={}&q={}&translated={}&trans_lang={}",
             self.api_key, query, 'y', '1'
         );
-        println!("{}", url);
+        //println!("{}", url);
 
         let response = self.client.get(&url).send().await;
-        let data = response.unwrap().text().await.expect("reqwest error");
+        let data = response?.text().await?;
 
         let data = data.replace("\n", "").replace("\t", "");
-        Session::parse(data, query)
+        Ok(Session::parse(data, query))
     }
 
     fn parse(data: String, query: String) -> Entry {
@@ -72,7 +72,7 @@ impl Session {
         let mut defi = Vec::new();
         let mut expl = Vec::new();
 
-        let result = root
+        let branches = root
             .children()
             .filter(|n| n.has_tag_name("item") & Session::has_child_tag(n, "word", &query))
             .flat_map(move |s| s.children())
@@ -80,7 +80,7 @@ impl Session {
             .flat_map(move |s| s.children())
             .filter(|n| n.has_tag_name("translation"));
 
-        for child in result {
+        for child in branches {
             for child in child.children().filter(|n| n.has_tag_name("trans_word")) {
                 defi.push(child.text().unwrap_or_default().to_owned());
             }
