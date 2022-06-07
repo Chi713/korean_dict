@@ -1,6 +1,11 @@
 use pyo3::prelude::*;
 use std::error::Error;
 
+const EXCEPTIONS: &'static [&str] = &[
+    "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF", "SE", "VX", "EC",
+    "EP", "EF", "ETM",
+];
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ParserKind {
     Khaiii,
@@ -34,7 +39,7 @@ impl Parser {
 
     //slient error being handled here MAKE SURE TO FIX
     pub fn change_parser(mut self, parser: ParserKind) -> Result<Self, Box<dyn Error>> {
-        let flag = Self::check_khaiii_install()?;
+        let flag = Self::has_khaiii()?;
         let parser = match (parser, flag) {
             (ParserKind::Khaiii, true) => ParserKind::Khaiii,
             (ParserKind::Khaiii, false) => ParserKind::Komoran,
@@ -44,7 +49,7 @@ impl Parser {
         Ok(self)
     }
 
-    pub fn check_khaiii_install() -> PyResult<bool> {
+    pub fn has_khaiii() -> PyResult<bool> {
         let res: PyResult<bool> = Python::with_gil(|py| {
             let check = PyModule::from_code(
                 py,
@@ -86,9 +91,8 @@ fn komoran_parse(sentence: String) -> PyResult<Vec<String>> {
     let mut words: Vec<String> = Vec::new();
     let mut word: &str;
     let mut tag: &str;
-    let exceptions = vec![
-        "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF",
-    ];
+    let mut exceptions: Vec<&str> = vec![];
+    exceptions.extend(EXCEPTIONS.iter().copied());
 
     for parts in res? {
         (word, tag) = (parts.0.as_str(), parts.1.as_str());
@@ -119,22 +123,17 @@ fn khaiii_parse(sentence: String) -> PyResult<Vec<String>> {
 
         Ok(result)
     });
-    //temporary fix to get code to run. TODO need to do actual parsing
-    //let mut words: Vec<(String, String)> = Vec::new();
-
-    //res?.to_owned_iter().for_each(|sent| {
-    //    println!("{:?}", sent);
-    //    words.push(sent[0].clone());
-    //});
 
     let mut words: Vec<String> = Vec::new();
     let mut word: &str;
     let mut tag: &str;
-    let exceptions = vec![
-        "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF",
-    ];
+    let mut exceptions = vec!["NNP", "NP", "VX"];
+    exceptions.extend(EXCEPTIONS.iter().copied());
 
-    for parts in res? {
+    let res = res?;
+    //println!("res tag: {:?}", res);
+
+    for parts in res {
         for thing in parts {
             (word, tag) = (thing.0.as_str(), thing.1.as_str());
             if !exceptions.contains(&tag) {
@@ -142,7 +141,6 @@ fn khaiii_parse(sentence: String) -> PyResult<Vec<String>> {
             }
         }
     }
-
     Ok(words)
 }
 
@@ -170,7 +168,7 @@ mod tests {
     #[test]
     fn test_change_parser() {
         let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
-        if Parser::check_khaiii_install().unwrap() {
+        if Parser::has_khaiii().unwrap() {
             assert_eq!(parser.parser_type(), ParserKind::Khaiii);
         } else {
             assert_eq!(parser.parser_type(), ParserKind::Komoran);
@@ -180,7 +178,7 @@ mod tests {
     #[test]
     //#[ignore]
     fn test_khaiii_parser() {
-        if Parser::check_khaiii_install().unwrap() {
+        if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
             let test_sentence = "안녕, 새상.".to_owned();
             let res = parser.parse(test_sentence).unwrap();
@@ -191,8 +189,8 @@ mod tests {
     #[test]
     fn test_komoran_parser() {
         let parser = Parser::new().change_parser(ParserKind::Komoran).unwrap();
-        let test_sentence = "안녕, 새상.".to_owned();
+        let test_sentence = "안녕, 세상.".to_owned();
         let res = parser.parse(test_sentence).unwrap();
-        assert_eq!(res, ["안녕".to_owned(), "새".to_owned(), "상".to_owned(),]);
+        assert_eq!(res, ["안녕".to_owned(), "세상".to_owned(),]);
     }
 }

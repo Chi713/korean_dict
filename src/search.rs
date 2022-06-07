@@ -1,12 +1,15 @@
+use futures::{stream, StreamExt};
 use reqwest;
 use reqwest::Client;
 use roxmltree::{Document, Node};
-use std::error;
+use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
-#[derive(Debug, PartialEq)]
+const CONCURRENT_REQUESTS: usize = 2;
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Entry {
     pub word: String,
     pub definition: Vec<String>,
@@ -23,13 +26,14 @@ impl Entry {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Session {
     client: Client,
     api_key: String,
 }
 
 impl Session {
-    pub fn new() -> Result<Session, Box<dyn error::Error>> {
+    pub fn new() -> Result<Session, Box<dyn Error>> {
         let mut f = File::open("resources/certs/krdict.pem")?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
@@ -50,7 +54,7 @@ impl Session {
         Ok(api_key)
     }
 
-    pub async fn get(&self, query: String) -> Result<Entry, Box<dyn error::Error>> {
+    pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error>> {
         let url = format!(
             "https://krdict.korean.go.kr/api/search?key={}&q={}&translated={}&trans_lang={}",
             self.api_key, query, 'y', '1'
@@ -87,6 +91,21 @@ impl Session {
 
         let res = Entry::new(query.to_owned(), defi, expl);
         Ok(res)
+    }
+
+    pub async fn get_list(&self, words: Vec<String>) -> Result<Vec<Entry>, Box<dyn Error>> {
+        //Result<Vec<Entry>, Box<dyn Error>> {
+        //let entries: Vec<_>;
+        let bodies = stream::iter(words.into_iter().map(|word| self.get(word)))
+            .buffer_unordered(CONCURRENT_REQUESTS)
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect();
+        bodies
+        //println!("bodies: {:?}", entries);
+
+        //Ok(())
     }
 
     fn has_child_tag(node: &Node, tag: &str, query: &str) -> bool {
