@@ -1,6 +1,1 @@
-aiohttp>=3.8
-asyncio>=3.4
-certifi>=2021.10
 konlpy>=0.6
-prettyprint>=0.1.5
-pyOpenSSL>=22
