@@ -7,13 +7,17 @@ async fn main() {
     let now = Instant::now();
     //let sentence = "안녕, 세상.".to_owned();
     let sentence = "제 친구 정우가 공항에서 저와 줄리아를 기다리고 있었어요.".to_owned();
+    //let sentence = "사람의 말이나 행동, 성격에서 잘못된 점이나 부족한 점을 지적하여 말하다".to_owned();
+    //let sentence = "재미있어요.".to_owned();
+    //let sentence = "생각을 하다".to_owned();
+    //let sentence = "생각하다".to_owned();
     //let query = "나무".to_owned();
     let client = Session::new().unwrap();
-    //let sentence = Sentence::new(test_sentence);
     let parser = Parser::new()
         .change_parser(ParserKind::Khaiii)
         .unwrap_or_default();
 
+    println!("sentence: {sentence}");
     let res = parser.parse(sentence).unwrap();
 
     //let response = client.get(query).await.unwrap();

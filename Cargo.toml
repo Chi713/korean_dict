@@ -15,3 +15,6 @@ roxmltree = "0.14"
 [dependencies.pyo3]
 version = "0.16.5"
 features = ["auto-initialize"]
+
+[dev-dependencies]
+serial_test = "0.7"

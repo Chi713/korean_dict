@@ -1,1 +1,1 @@
-# korean_dict_py
+# korean_dict

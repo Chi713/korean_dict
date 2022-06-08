@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
-const CONCURRENT_REQUESTS: usize = 2;
+const CONCURRENT_REQUESTS: usize = 20;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Entry {
@@ -56,12 +56,13 @@ impl Session {
 
     pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error>> {
         let url = format!(
-            "https://krdict.korean.go.kr/api/search?key={}&q={}&translated={}&trans_lang={}",
-            self.api_key, query, 'y', '1'
+            "https://krdict.korean.go.kr/api/search?key={}&q={}&translated=y&trans_lang={}",
+            self.api_key, query, '1'
         );
 
         let response = self.client.get(&url).send().await?;
         let data = response.text().await?;
+        //println!("{:?}", data);
         let res = Session::parse(data, query)?;
         Ok(res)
     }
@@ -94,18 +95,15 @@ impl Session {
     }
 
     pub async fn get_list(&self, words: Vec<String>) -> Result<Vec<Entry>, Box<dyn Error>> {
-        //Result<Vec<Entry>, Box<dyn Error>> {
-        //let entries: Vec<_>;
         let bodies = stream::iter(words.into_iter().map(|word| self.get(word)))
-            .buffer_unordered(CONCURRENT_REQUESTS)
+            .buffered(CONCURRENT_REQUESTS)
             .collect::<Vec<_>>()
             .await
             .into_iter()
             .collect();
         bodies
-        //println!("bodies: {:?}", entries);
 
-        //Ok(())
+        //TODO add caching
     }
 
     fn has_child_tag(node: &Node, tag: &str, query: &str) -> bool {
