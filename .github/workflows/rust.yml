@@ -38,7 +38,7 @@ jobs:
         echo $KRDICT_API_KEY >> .apikey
     - name: check file path
       run: |
-        ls
+        ls -ah
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
