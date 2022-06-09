@@ -32,13 +32,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Get API Key
-    - shell: bash
       env:
         KRDICT_API_KEY: ${{ secrets.KRDICT_API_KEY}}
       run: |
-        $KRDICT_API_KEY >> .apikey
-        cat .apikey
-        ls
+        echo $KRDICT_API_KEY >> .apikey
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
