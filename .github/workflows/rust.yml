@@ -32,10 +32,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - uses: actions/checkout@v3
-    - name: Get API Key
+    - name: Build
       env:
         KRDICT_API_KEY: '${{ secrets.KRDICT_API_KEY}}'
-    - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
