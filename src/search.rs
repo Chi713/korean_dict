@@ -57,10 +57,11 @@ impl Session {
             api_key = args[1].clone();
         } else {
             println!("used file");
-            let mut f = File::open(".apikey")?;
+            let mut f = File::open("./.apikey")?;
             let mut buf = String::new();
             f.read_to_string(&mut buf)?;
-            api_key = buf;
+            api_key = buf.trim().into();
+            println!("{api_key}");
         }
         Ok(api_key)
     }
@@ -71,6 +72,7 @@ impl Session {
             self.api_key, query, '1'
         );
 
+        println!("{:?}", url);
         let response = self.client.get(&url).send().await?;
         let data = response.text().await?;
         //println!("{:?}", data);
