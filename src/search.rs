@@ -51,6 +51,7 @@ impl Session {
     fn api_key() -> Result<String, io::Error> {
         let args: Vec<String> = env::args().collect();
         println!("args: {:?}", args);
+        println!("env args: {:?}", env::var("KRDICT_API_KEY").is_ok());
         let api_key: String;
         if args.len() > 1 {
             println!("used cmd passed env key");
