@@ -57,7 +57,7 @@ impl Session {
             api_key = args[1].clone();
         } else {
             println!("used file");
-            let mut f = File::open(".apikey")?;
+            let mut f = File::open("./.apikey")?;
             let mut buf = String::new();
             f.read_to_string(&mut buf)?;
             api_key = buf;
