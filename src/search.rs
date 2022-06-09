@@ -50,21 +50,30 @@ impl Session {
 
     fn api_key() -> Result<String, io::Error> {
         let args: Vec<String> = env::args().collect();
-        println!("args: {:?}", args);
+        //println!("args: {:?}", args);
+        //println!("env args krdict: {:?}", env::var("KRDICT_API_KEY").is_ok());
+        //for (key, value) in env::vars() {
+        //    println!("env args: key: {:?}, value: {:?}", key, value);
+        //}
         let api_key: String;
         if args.len() > 1 {
-            println!("used env");
+            println!("used cmd passed env key");
             api_key = args[1].clone();
+        } else if env::var("KRDICT_API_KEY").is_ok() {
+            println!("used env set key");
+            api_key = env::var("KRDICT_API_KEY").unwrap().into();
         } else {
             println!("used file");
             let mut f = File::open("./.apikey")?;
             let mut buf = String::new();
             f.read_to_string(&mut buf)?;
             api_key = buf.trim().into();
-            println!("{api_key}");
+            println!("apikey: {}", api_key);
         }
         Ok(api_key)
     }
+
+
 
     pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error>> {
         let url = format!(
@@ -72,7 +81,7 @@ impl Session {
             self.api_key, query, '1'
         );
 
-        println!("{:?}", url);
+        //println!("{:?}", url);
         let response = self.client.get(&url).send().await?;
         let data = response.text().await?;
         //println!("{:?}", data);
