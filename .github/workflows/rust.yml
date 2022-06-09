@@ -36,7 +36,7 @@ jobs:
       env:
         KRDICT_API_KEY: '${{ secrets.KRDICT_API_KEY}}'
       run: |
-        echo $KRDICT_API_KEY
+        $KRDICT_API_KEY >> .apikey
     - name: Build
       run: cargo build --verbose
     - name: Run tests
