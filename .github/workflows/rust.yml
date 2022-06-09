@@ -36,6 +36,9 @@ jobs:
         KRDICT_API_KEY: ${{ secrets.KRDICT_API_KEY}}
       run: |
         echo $KRDICT_API_KEY >> .apikey
+    - name: check file path
+      run: |
+        ls
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
