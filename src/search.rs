@@ -50,11 +50,11 @@ impl Session {
 
     fn api_key() -> Result<String, io::Error> {
         let args: Vec<String> = env::args().collect();
-        println!("args: {:?}", args);
-        println!("env args krdict: {:?}", env::var("KRDICT_API_KEY").is_ok());
-        for (key, value) in env::vars() {
-            println!("env args: key: {:?}, value: {:?}", key, value);
-        }
+        //println!("args: {:?}", args);
+        //println!("env args krdict: {:?}", env::var("KRDICT_API_KEY").is_ok());
+        //for (key, value) in env::vars() {
+        //    println!("env args: key: {:?}, value: {:?}", key, value);
+        //}
         let api_key: String;
         if args.len() > 1 {
             println!("used cmd passed env key");
@@ -81,7 +81,7 @@ impl Session {
             self.api_key, query, '1'
         );
 
-        println!("{:?}", url);
+        //println!("{:?}", url);
         let response = self.client.get(&url).send().await?;
         let data = response.text().await?;
         //println!("{:?}", data);
