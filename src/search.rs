@@ -60,7 +60,7 @@ impl Session {
             let mut f = File::open("./.apikey")?;
             let mut buf = String::new();
             f.read_to_string(&mut buf)?;
-            api_key = buf;
+            api_key = buf.trim().into();
         }
         Ok(api_key)
     }
