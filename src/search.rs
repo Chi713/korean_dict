@@ -2,6 +2,7 @@ use futures::{stream, StreamExt};
 use reqwest;
 use reqwest::Client;
 use roxmltree::{Document, Node};
+use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io;
@@ -48,9 +49,19 @@ impl Session {
     }
 
     fn api_key() -> Result<String, io::Error> {
-        let mut f = File::open(".apikey")?;
-        let mut api_key = String::new();
-        f.read_to_string(&mut api_key)?;
+        let args: Vec<String> = env::args().collect();
+        println!("args: {:?}", args);
+        let api_key: String;
+        if args.len() > 1 {
+            println!("used env");
+            api_key = args[1].clone();
+        } else {
+            println!("used file");
+            let mut f = File::open(".apikey")?;
+            let mut buf = String::new();
+            f.read_to_string(&mut buf)?;
+            api_key = buf;
+        }
         Ok(api_key)
     }
 
