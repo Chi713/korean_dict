@@ -71,6 +71,7 @@ impl Session {
             self.api_key, query, '1'
         );
 
+        println!("{:?}", url);
         let response = self.client.get(&url).send().await?;
         let data = response.text().await?;
         //println!("{:?}", data);
