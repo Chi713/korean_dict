@@ -33,7 +33,7 @@ jobs:
         pip install -r requirements.txt
     - shell: bash
       env:
-        KRDICT_API_KEY: ${{ secret.SuperSecret}}
+        KRDICT_API_KEY: ${{ secrets.KRDICT_API_KEY}}
       run: |
         $KRDICT_API_KEY >> .apikey
     - uses: actions/checkout@v3
