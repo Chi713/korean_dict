@@ -61,6 +61,7 @@ impl Session {
             let mut buf = String::new();
             f.read_to_string(&mut buf)?;
             api_key = buf.trim().into();
+            println!("{api_key}");
         }
         Ok(api_key)
     }
