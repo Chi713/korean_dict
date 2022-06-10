@@ -30,7 +30,7 @@ impl Entry {
 #[derive(Debug, Clone)]
 pub struct Session {
     client: Client,
-    api_key: String,
+    krdict_api_key: String,
 }
 
 impl Session {
@@ -45,23 +45,17 @@ impl Session {
             .build()?;
 
         let api_key = Session::api_key()?;
-        Ok(Session { client, api_key })
+        Ok(Session {
+            client,
+            krdict_api_key: api_key,
+        })
     }
 
     fn api_key() -> Result<String, io::Error> {
-        let args: Vec<String> = env::args().collect();
-        //println!("args: {:?}", args);
-        //println!("env args krdict: {:?}", env::var("KRDICT_API_KEY").is_ok());
-        //for (key, value) in env::vars() {
-        //    println!("env args: key: {:?}, value: {:?}", key, value);
-        //}
         let api_key: String;
-        if args.len() > 1 {
-            println!("used cmd passed env key");
-            api_key = args[1].clone();
-        } else if env::var("KRDICT_API_KEY").is_ok() {
+        if env::var("KRDICT_API_KEY").is_ok() {
             println!("used env set key");
-            api_key = env::var("KRDICT_API_KEY").unwrap().into();
+            api_key = env::var("KRDICT_API_KEY").unwrap();
         } else {
             println!("used file");
             let mut f = File::open("./.apikey")?;
@@ -73,23 +67,18 @@ impl Session {
         Ok(api_key)
     }
 
-
-
     pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error>> {
         let url = format!(
             "https://krdict.korean.go.kr/api/search?key={}&q={}&translated=y&trans_lang={}",
-            self.api_key, query, '1'
+            self.krdict_api_key, query, '1'
         );
 
         //println!("{:?}", url);
         let response = self.client.get(&url).send().await?;
         let data = response.text().await?;
         //println!("{:?}", data);
-        let res = Session::parse(data, query)?;
-        Ok(res)
-    }
 
-    fn parse(data: String, query: String) -> Result<Entry, roxmltree::Error> {
+        //parses the data and builds Entry
         let doc: Document = roxmltree::Document::parse(&data)?;
         let root = doc.root().first_child().unwrap();
         let mut defi = Vec::new();
@@ -105,11 +94,11 @@ impl Session {
                 child
                     .children()
                     .filter(|n| n.has_tag_name("trans_word"))
-                    .for_each(|child| defi.push(child.text().unwrap_or("").to_owned()));
+                    .for_each(|child| defi.push(child.text().unwrap_or("").trim().to_owned()));
                 child
                     .children()
                     .filter(|n| n.has_tag_name("trans_dfn"))
-                    .for_each(|child| expl.push(child.text().unwrap_or("").to_owned()));
+                    .for_each(|child| expl.push(child.text().unwrap_or("").trim().to_owned()));
             });
 
         let res = Entry::new(query.to_owned(), defi, expl);
@@ -157,13 +146,31 @@ mod tests {
             response,
             Entry {
                 word: "나무".into(),
-                definition: vec!("tree".into(), "wood".into(), "timber; log".into()),
-                explaination: vec!(
+                definition: vec!["tree".into(), "wood".into(), "timber; log".into()],
+                explaination: vec![
                     "A plant with a hard stem, branches and leaves.".into(),
                     "The material used to build a house or to make furniture.".into(),
                     "The trunk or branches of a tree cut to be used as firewood.".into()
-                ),
+                ],
             }
         );
+    }
+
+    #[tokio::test]
+    async fn test_session_get_list() {
+        let query = vec!["공항".to_owned(), "기다리다".to_owned()];
+        let client = Session::new().unwrap();
+        let response = client.get_list(query).await.unwrap();
+        assert_eq!(
+            response,
+            [Entry {
+                word: "공항".into(),
+                definition: vec!["airport".into()],
+                explaination: vec!["A place for airplanes to land and take off.".into()],
+            }, Entry {
+                    word: "기다리다".to_owned(),
+                    definition: vec!["wait".to_owned()],
+                    explaination: vec!["To spend time until a person or time comes or a certain event is realized.".to_owned()],
+            }]);
     }
 }

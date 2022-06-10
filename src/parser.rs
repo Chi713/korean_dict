@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
 use std::error::Error;
 
-const EXCEPTIONS: &'static [&str] = &[
-    "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF", "SE", "EC", "EP",
-    "EF", "ETM",
+const EXCEPTIONS: &[&str] = &[
+    "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF", "SE", "SS", "EC",
+    "EP", "EF", "ETM",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -99,7 +99,7 @@ fn komoran_parse(sentence: String) -> PyResult<Vec<String>> {
     //println!("res tag: {:?}", res);
 
     res.into_iter()
-        .filter(|m| !ex_tags.contains(&m.1.as_str()) & !has_ban_morph(&m))
+        .filter(|m| !ex_tags.contains(&m.1.as_str()) & !has_ban_morph(m))
         .for_each(|morphs| {
             let (mut word, tag) = morphs;
             if stem_tags.contains(&tag.as_ref()) {
@@ -146,13 +146,13 @@ fn khaiii_parse(sentence: String) -> PyResult<Vec<String>> {
     ex_tags.extend(EXCEPTIONS.iter().copied());
 
     let res = res?;
-    //println!("res tag: {:?}", res);
+    println!("res tag: {:?}", res);
 
     res.into_iter().for_each(|w| {
         w.into_iter()
-            .filter(|m| !ex_tags.contains(&m.1.as_str()) & !has_ban_morph(&m))
+            .filter(|m| !ex_tags.contains(&m.1.as_str()) & !has_ban_morph(m))
             .for_each(|morphs| {
-                let (mut word, tag) = morphs.clone();
+                let (mut word, tag) = morphs;
                 if stem_tags.contains(&tag.as_ref()) {
                     let mut temp_word: String = words_list.pop().unwrap();
                     temp_word.push_str(&word);
