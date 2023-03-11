@@ -3,3 +3,10 @@ members = [
   "server",
   "frontend",
 ]
+
+
+[package]
+name = "korean_dict"
+version = "0.1.0"
+authors = ["Chris Hoskin <chris.hoskin2355@gmail.com>"]
+edition = "2021"

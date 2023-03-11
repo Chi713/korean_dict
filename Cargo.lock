@@ -953,6 +953,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "korean_dict"
+version = "0.1.0"
+
+[[package]]
 name = "korean_dict_server"
 version = "0.1.0"
 dependencies = [

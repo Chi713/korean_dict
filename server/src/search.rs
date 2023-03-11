@@ -10,6 +10,8 @@ use std::fs::File;
 use std::io::prelude::*;
 
 const CONCURRENT_REQUESTS: usize = 20;
+const CERT_PATH: &str = "resources/certs/krdict.pem";
+const APIKEY_PATH: &str = ".apikey";
 
 #[derive(Debug, Clone, PartialEq,Deserialize, Serialize)]
 pub struct Entry {
@@ -36,7 +38,7 @@ pub struct Session {
 
 impl Session {
     pub fn new() -> Result<Session, Box<dyn Error>> {
-        let mut f = File::open("resources/certs/krdict.pem")?;
+        let mut f = File::open(CERT_PATH)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
         let cert = reqwest::Certificate::from_pem(&buf)?;
@@ -59,7 +61,7 @@ impl Session {
             api_key = env::var("KRDICT_API_KEY")?;
         } else {
             println!("used file");
-            let mut f = File::open("./.apikey")?;
+            let mut f = File::open(APIKEY_PATH)?;
             let mut buf = String::new();
             f.read_to_string(&mut buf)?;
             api_key = buf.trim().into();
