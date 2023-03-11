@@ -3,7 +3,7 @@ src/koreanDict/__pycache__
 tests/__pycache__
 src/koreanDict.egg-info
 __pycache__
-
+dist
 
 # Added by cargo
 

@@ -2,15 +2,16 @@ use futures::{stream, StreamExt};
 use reqwest;
 use reqwest::Client;
 use roxmltree::{Document, Node};
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::error::Error;
 use std::fs::File;
-use std::io;
+//use std::io;
 use std::io::prelude::*;
 
 const CONCURRENT_REQUESTS: usize = 20;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq,Deserialize, Serialize)]
 pub struct Entry {
     pub word: String,
     pub definition: Vec<String>,
@@ -19,7 +20,7 @@ pub struct Entry {
 
 impl Entry {
     fn new(word: String, definition: Vec<String>, explaination: Vec<String>) -> Entry {
-        Entry {
+        Self {
             word,
             definition,
             explaination,
@@ -45,17 +46,17 @@ impl Session {
             .build()?;
 
         let api_key = Session::api_key()?;
-        Ok(Session {
+        Ok(Self {
             client,
             krdict_api_key: api_key,
         })
     }
 
-    fn api_key() -> Result<String, io::Error> {
+    fn api_key() -> Result<String, Box<dyn Error>> {
         let api_key: String;
         if env::var("KRDICT_API_KEY").is_ok() {
             println!("used env set key");
-            api_key = env::var("KRDICT_API_KEY").unwrap();
+            api_key = env::var("KRDICT_API_KEY")?;
         } else {
             println!("used file");
             let mut f = File::open("./.apikey")?;
@@ -67,7 +68,7 @@ impl Session {
         Ok(api_key)
     }
 
-    pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error>> {
+    pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error + Send + Sync>> {
         let url = format!(
             "https://krdict.korean.go.kr/api/search?key={}&q={}&translated=y&trans_lang={}",
             self.krdict_api_key, query, '1'
@@ -105,14 +106,14 @@ impl Session {
         Ok(res)
     }
 
-    pub async fn get_list(&self, words: Vec<String>) -> Result<Vec<Entry>, Box<dyn Error>> {
-        let bodies = stream::iter(words.into_iter().map(|word| self.get(word)))
+    pub async fn get_list(&self, words: Vec<String>) -> Result<Vec<Entry>, Box<dyn Error + Send + Sync>> {
+        stream::iter(words.into_iter().map(|word| self.get(word)))
             .buffered(CONCURRENT_REQUESTS)
             .collect::<Vec<_>>()
             .await
             .into_iter()
-            .collect();
-        bodies
+            .collect()
+        //bodies
 
         //TODO add caching
     }
@@ -139,9 +140,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_get() {
-        let query = "나무".to_owned();
+        let query = "나무";
         let client = Session::new().unwrap();
-        let response = client.get(query).await.unwrap();
+        let response = client.get(query.to_owned()).await.unwrap();
         assert_eq!(
             response,
             Entry {
