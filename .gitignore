@@ -1,4 +1,4 @@
-.apikey
+.env
 src/koreanDict/__pycache__
 tests/__pycache__
 src/koreanDict.egg-info

@@ -7,11 +7,11 @@ use std::env;
 use std::error::Error;
 use std::fs::File;
 //use std::io;
+use dotenv::dotenv;
 use std::io::prelude::*;
 
 const CONCURRENT_REQUESTS: usize = 20;
 const CERT_PATH: &str = "resources/certs/krdict.pem";
-const APIKEY_PATH: &str = ".apikey";
 
 #[derive(Debug, Clone, PartialEq,Deserialize, Serialize)]
 pub struct Entry {
@@ -38,6 +38,7 @@ pub struct Session {
 
 impl Session {
     pub fn new() -> Result<Session, Box<dyn Error>> {
+        println!("opening the cert file");
         let mut f = File::open(CERT_PATH)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
@@ -55,18 +56,8 @@ impl Session {
     }
 
     fn api_key() -> Result<String, Box<dyn Error>> {
-        let api_key: String;
-        if env::var("KRDICT_API_KEY").is_ok() {
-            println!("used env set key");
-            api_key = env::var("KRDICT_API_KEY")?;
-        } else {
-            println!("used file");
-            let mut f = File::open(APIKEY_PATH)?;
-            let mut buf = String::new();
-            f.read_to_string(&mut buf)?;
-            api_key = buf.trim().into();
-            println!("apikey: {}", api_key);
-        }
+        dotenv().ok(); 
+        let api_key = env::var("KRDICT_API_KEY")?;
         Ok(api_key)
     }
 
