@@ -18,6 +18,8 @@ use gloo::file::File;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
+const PORT: usize = 8080;
+
 //-----------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -51,12 +53,6 @@ pub struct SentenceListProps {
     //pub sentences: Vec<Sentence>,
     pub sentences_cb: Callback<RecievedData>,
 }
-
-//impl SentenceListProps {
-//    pub fn send_prop() {
-
-//    }
-//}
 
 //------------------------------------------------------------------------------
 
@@ -128,7 +124,8 @@ pub fn file_component(props: &SentenceListProps) -> Html {
 
                     let client = reqwest::Client::new();
                     //TODO fix to use a url variable instead of hard coded value
-                    let server_res = client.post("http://localhost:8080/api/fileData")
+                    let url = format!("http://localhost:{}/api/fileData", PORT);
+                    let server_res = client.post(url)
                         .json(&file_json)
                         .send()
                         .await
