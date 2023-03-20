@@ -12,13 +12,7 @@ pub enum ParserKind {
     #[default]
     Komoran,
 }
-/*
-impl Default for ParserKind {
-    fn default() -> Self {
-        ParserKind::Komoran
-    }
-}
-*/
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Parser {
     parser: ParserKind,
@@ -92,13 +86,9 @@ fn komoran_parse(sentence: &str) -> Result<Vec<String>, Box<dyn Error>> {
 
         fun.getattr("parse")?.call1((sentence,))?.extract()
     })?;
-    //let mut words_list: Vec<String> = Vec::new();
-    //let verb_tags = vec!["VV", "XSV", "XSA", "VA", "V"];
-    //let stem_tags = vec!["XSV", "XSA"];
     let mut ex_tags: Vec<&str> = vec!["XPN", "NP", "VX"];
     ex_tags.extend(EXCEPTIONS.iter().copied());
 
-    //let res = res?;
     //println!("res tag: {:?}", res);
 
     let filtered_result: Vec<(String, String)> = result
@@ -108,7 +98,6 @@ fn komoran_parse(sentence: &str) -> Result<Vec<String>, Box<dyn Error>> {
         .collect();
 
     let words_list: Vec<String> = word_shuffle(filtered_result);
-        //.flat_map(|(mut word, tag)| {
 
     Ok(words_list)
 }
@@ -153,24 +142,19 @@ fn khaiii_parse(sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
         fun?.getattr("parse")?.call1((sentence,))?.extract()
     })?;
 
-    //let mut words_list: Vec<String> = Vec::new();
-    //let verb_tags = vec!["VV", "VA", "XSV", "XSA"];
-    //let stem_tags = vec!["XSV", "XSA"];
-    let mut ex_tags = vec!["NNP", "NP", "VX"];
-    //let exception_words = vec!["하다", "되다", "있다", "없다", "나다"];
-    ex_tags.extend(EXCEPTIONS.iter().copied());
-
-    //let res = res?;
     println!("res tag: {:?}", result);
 
+    let mut ex_tags = vec!["NNP", "NP", "VX"];
+    ex_tags.extend(EXCEPTIONS.iter().copied());
 
-     let words_list = result.into_iter().flat_map(|word| {
+    let words_list = result.into_iter().flat_map(|word| {
         let word_filtered: Vec<(String, String)> = word.into_iter()
             .filter(|m| !ex_tags.contains(&m.1.as_str()))
-            .filter(|m| !has_ban_morph(m)).collect();
+            .filter(|m| !has_ban_morph(m))
+            .collect();
         word_salad_shuffle(word_filtered)
-        })
-        .collect();
+    })
+    .collect();
     
 
     Ok(words_list)
@@ -193,38 +177,18 @@ fn word_salad_shuffle(data: Vec<(String, String)>) -> Vec<String> {
         if verb_tags.contains(&tag.as_ref()) {
             word.push('다');
         }
-        //if !exception_words.contains(&word) {
         output_data.push(word.to_owned());
         }
         output_data
 }
 
 fn has_ban_morph(word: &(String, String)) -> bool {
-    let mut flag: bool = false;
     let banned_verb_tags = vec![
         ("하".to_owned(), "VV".to_owned()),
         ("되".to_owned(), "VV".to_owned()),
     ];
-    if banned_verb_tags.iter().any(|e| e == word) {
-        flag = true;
-    }
-    flag
+    banned_verb_tags.iter().any(|e| e == word)
 }
-
-/*
-fn has_ban_morph(word: &(String, String)) -> bool {
-    let mut flag: bool = false;
-    let banned_verb_tags = vec![
-        ("하".to_owned(), "VV".to_owned()),
-        ("되".to_owned(), "VV".to_owned()),
-    ];
-    if banned_verb_tags.iter().any(|e| e == word) {
-        flag = true;
-    }
-    flag
-}
-
-*/
 
 #[cfg(test)]
 mod tests {
