@@ -1,12 +1,10 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
-//use yew::Properties;
 use components::file_uploader::{
     Entry,
     FileUploader,
     RecievedData,
 };
-//use components::file_uploader2::FileUploader2;
 
 mod components;
 
@@ -63,7 +61,6 @@ fn home() -> Html {
     html! {
         <div>
             <h1>{"korean dictionary tool"}</h1>
-            //<FileUploader sentences={sentences.clone()}/>
             <FileUploader {sentences_cb}/>
             <div>
             {

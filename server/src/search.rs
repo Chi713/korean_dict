@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::error::Error;
 use std::fs::File;
-//use std::io;
 use dotenv::dotenv;
+use anyhow::Context;
 use std::io::prelude::*;
 
 const CONCURRENT_REQUESTS: usize = 20;
@@ -38,27 +38,24 @@ pub struct Session {
 
 impl Session {
     pub fn new() -> Result<Session, Box<dyn Error>> {
+        dotenv().ok();
         println!("opening the cert file");
-        let mut f = File::open(CERT_PATH)?;
+        let mut f = File::open(CERT_PATH).context("failed to open certificate from path")?;
         let mut buf = Vec::new();
-        f.read_to_end(&mut buf)?;
-        let cert = reqwest::Certificate::from_pem(&buf)?;
+        f.read_to_end(&mut buf).context("failed to read cert to buffer")?;
+        let cert = reqwest::Certificate::from_pem(&buf)
+            .context("failed to turn buffered file into reqwest certificate")?;
 
         let client = reqwest::Client::builder()
             .add_root_certificate(cert)
             .build()?;
 
-        let api_key = Session::api_key()?;
+        let api_key = env::var("KRDICT_API_KEY")
+            .context("failed to load apikey from environment variable")?;
         Ok(Self {
             client,
             krdict_api_key: api_key,
         })
-    }
-
-    fn api_key() -> Result<String, Box<dyn Error>> {
-        dotenv().ok(); 
-        let api_key = env::var("KRDICT_API_KEY")?;
-        Ok(api_key)
     }
 
     pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error + Send + Sync>> {
@@ -68,13 +65,13 @@ impl Session {
         );
 
         //println!("{:?}", url);
-        let response = self.client.get(&url).send().await?;
+        let response = self.client.get(&url).send().await.context("dict request failed")?;
         let data = response.text().await?;
         //println!("{:?}", data);
 
         //parses the data and builds Entry
-        let doc: Document = roxmltree::Document::parse(&data)?;
-        let root = doc.root().first_child().unwrap();
+        let doc: Document = roxmltree::Document::parse(&data).context("failed to parse xml")?;
+        let root = doc.root().first_child().context("root doesn't exist")?;
         let mut defi = Vec::new();
         let mut expl = Vec::new();
 
