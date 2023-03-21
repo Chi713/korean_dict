@@ -178,8 +178,8 @@ fn word_salad_shuffle(data: Vec<(String, String)>) -> Vec<String> {
             word.push('다');
         }
         output_data.push(word.to_owned());
-        }
-        output_data
+    }
+    output_data
 }
 
 fn has_ban_morph(word: &(String, String)) -> bool {
@@ -267,6 +267,17 @@ mod tests {
         assert_eq!(res, ["생각".to_owned()]);
     }
 
+    /*
+    #[test]
+    #[serial]
+    fn test_komoran_parser5() {
+        let parser = Parser::new();
+        let test_sentence = "다시 다시";
+        let res = parser.parse(test_sentence).unwrap();
+        assert_eq!(res, ["다시".to_owned()]);
+    }
+    */
+
     #[test]
     #[serial]
     fn test_khaiii_parser() {
@@ -312,4 +323,16 @@ mod tests {
             assert_eq!(res, ["생각".to_owned()]);
         }
     }
+
+    /*
+    #[test]
+    fn test_khaiii_parser5() {
+        if Parser::has_khaiii().unwrap() {
+            let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
+            let test_sentence = "다시 다시";
+            let res = parser.parse(test_sentence).unwrap();
+            assert_eq!(res, ["다시".to_owned()]);
+        }
+    }
+    */
 }

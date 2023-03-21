@@ -77,7 +77,8 @@ async fn hello() -> impl IntoResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PostResponseData {
-    sentence: Vec<Entry>,
+    sentence: String,
+    sentence_entries: Vec<Entry>,
     prev_flag: bool,
     next_flag: bool,
 
@@ -105,7 +106,8 @@ async fn process_file_data(Json(body): extract::Json<FileData>) -> Result<Json<P
     let response = client.get_list(res).await.unwrap();
     println!("Searched sentence: {:#?}", response);
     Ok(Json(PostResponseData{
-        sentence: response,
+        sentence: sentence.to_string(),
+        sentence_entries: response,
         prev_flag: false,
         next_flag: true
     }))

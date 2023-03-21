@@ -29,9 +29,10 @@ pub struct Entry {
     pub explaination: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 pub struct RecievedData {
-    pub sentence: Vec<Entry>,
+    pub sentence: String,
+    pub sentence_entries: Vec<Entry>,
     pub prev_flag: bool,
     pub next_flag: bool,
 }
@@ -48,9 +49,8 @@ pub struct Sentence {
     pub text: String,
 }
 
-#[derive(Clone, PartialEq, Properties)]
+#[derive(Properties, Clone, PartialEq)]
 pub struct SentenceListProps {
-    //pub sentences: Vec<Sentence>,
     pub sentences_cb: Callback<RecievedData>,
 }
 
@@ -142,7 +142,7 @@ pub fn file_component(props: &SentenceListProps) -> Html {
     html! {
         <div id="wrapper">
                 
-            <p id="title">{ "Upload Your Files To The Cloud" }</p>
+            //<p id="title">{ "Upload Your Files To The Cloud" }</p>
                 
             <label for="file-upload">
                 <div
@@ -201,9 +201,11 @@ fn view_file(file: &FileDetails) -> Html {
     html! {
         <div class="preview-tile">
             <p class="preview-name">{ format!("{}", file.name) }</p>
+            /*
             <div>
                 {format!("{}", &file.data)}
             </div>
+            */
         </div>
     }
 }

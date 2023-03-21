@@ -5,6 +5,7 @@ use components::file_uploader::{
     FileUploader,
     RecievedData,
 };
+use components::sentence_viewer::SentenceViewer;
 
 mod components;
 
@@ -38,59 +39,24 @@ fn main() {
 
 #[function_component(Home)]
 fn home() -> Html {
-    let sent_from_file_uploader = use_state(RecievedData::default);
+    let file_uploader_data = use_state(RecievedData::default);
     let sentences_cb = {
-        let sent_from_file_uploader = sent_from_file_uploader.clone();
+        let file_uploader_data = file_uploader_data.clone();
         Callback::from(move |data: RecievedData|{
-            log::debug!("sent from file uploader component: {:?}", data.sentence);
-            sent_from_file_uploader.set(data);
+            log::debug!("sent from file uploader component: {:?}\n{:#?}", data.sentence, data.sentence_entries);
+            file_uploader_data.set(data);
     })};
 
-    /*
-    let sentences = vec![
-        Sentence {
-            id: 1,
-            text: "안녕하세요 테스트입니다".to_string(),
-        },
-        Sentence {
-            id: 2,
-            text: "안녕하세요, 이번 테스트입니다".to_string(),
-        }
-    ];
-    */
     html! {
         <div>
-            <h1>{"korean dictionary tool"}</h1>
+            <h1 id="title">{"korean dictionary tool"}</h1>
+            if (*file_uploader_data) == RecievedData::default() {
             <FileUploader {sentences_cb}/>
-            <div>
-            {
-                (*sent_from_file_uploader).clone().sentence.into_iter().map(|entry: Entry|{
-                    html!{<div>{ format!("entry: word: {}, definition: {:?}, explaination: {:?}", entry.word, entry.definition, entry.explaination) }</div>}
-                }).collect::<Html>()
-            }
-            //<SentenceList sentences={sentences.clone()}/>
-            </div>
+            }else {
+            <SentenceViewer
+                sentence={(*file_uploader_data).clone().sentence}
+                sentence_entries={(*file_uploader_data).clone().sentence_entries}
+            />}
         </div>
     }
 }
-
-/*
-#[derive(Clone, PartialEq)]
-pub struct Sentence {
-    id: usize,
-    text: String,
-}
-
-#[derive(Clone, PartialEq, Properties)]
-pub struct SentenceListProps {
-    sentences: Vec<Sentence>,
-}
-*/
-/*
-#[function_component(SentenceList)]
-pub fn sentence_list(SentenceListProps {sentences} : &SentenceListProps) -> Html {
-    sentences.iter().map(|sentence| html! {
-        <p>{format!("{}: {}", sentence.id, sentence.text)}</p>
-    }).collect()
-}
-*/
