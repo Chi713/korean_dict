@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use std::error::Error;
+use std::collections::HashSet;
 
 const EXCEPTIONS: &[&str] = &[
     "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF", "SE", "SS", "EC",
@@ -97,7 +98,7 @@ fn komoran_parse(sentence: &str) -> Result<Vec<String>, Box<dyn Error>> {
         .filter(|x| !ex_tags.contains(&x.1.as_str()))
         .collect();
 
-    let words_list: Vec<String> = word_shuffle(filtered_result);
+    let words_list: Vec<String> = remove_dup(word_shuffle(filtered_result));
 
     Ok(words_list)
 }
@@ -147,7 +148,7 @@ fn khaiii_parse(sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
     let mut ex_tags = vec!["NNP", "NP", "VX"];
     ex_tags.extend(EXCEPTIONS.iter().copied());
 
-    let words_list = result.into_iter().flat_map(|word| {
+    let mut words_list = result.into_iter().flat_map(|word| {
         let word_filtered: Vec<(String, String)> = word.into_iter()
             .filter(|m| !ex_tags.contains(&m.1.as_str()))
             .filter(|m| !has_ban_morph(m))
@@ -155,7 +156,8 @@ fn khaiii_parse(sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
         word_salad_shuffle(word_filtered)
     })
     .collect();
-    
+
+    words_list= remove_dup(words_list);
 
     Ok(words_list)
 }
@@ -180,6 +182,13 @@ fn word_salad_shuffle(data: Vec<(String, String)>) -> Vec<String> {
         output_data.push(word.to_owned());
     }
     output_data
+}
+
+fn remove_dup (mut list: Vec<String>) -> Vec<String> {
+    let mut seen = HashSet::new();
+    list.retain(|s| seen.insert(s.clone()));
+    list
+
 }
 
 fn has_ban_morph(word: &(String, String)) -> bool {
@@ -267,16 +276,14 @@ mod tests {
         assert_eq!(res, ["생각".to_owned()]);
     }
 
-    /*
     #[test]
     #[serial]
     fn test_komoran_parser5() {
         let parser = Parser::new();
-        let test_sentence = "다시 다시";
+        let test_sentence = "다시 또 다시";
         let res = parser.parse(test_sentence).unwrap();
-        assert_eq!(res, ["다시".to_owned()]);
+        assert_eq!(res, ["다시".to_owned(), "또".to_owned()]);
     }
-    */
 
     #[test]
     #[serial]
@@ -324,15 +331,13 @@ mod tests {
         }
     }
 
-    /*
     #[test]
     fn test_khaiii_parser5() {
         if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
-            let test_sentence = "다시 다시";
+            let test_sentence = "다시 시작해, 다시";
             let res = parser.parse(test_sentence).unwrap();
-            assert_eq!(res, ["다시".to_owned()]);
+            assert_eq!(res, ["다시".to_owned(), "시작하다".to_owned()]);
         }
     }
-    */
 }
