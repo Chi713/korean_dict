@@ -23,6 +23,28 @@ input#file-upload {
   visibility: hidden;
 }
 
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  margin: 0.5rem;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #fcfcfc;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+button:hover {
+  border-color: #646cff;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
 #wrapper {
   width: 70%;
   margin: auto;
@@ -77,9 +99,26 @@ input#file-upload {
 }
 
 .entry-word {
-  font-size: 1.5rem;
+  font-size: 1rem;
 }
 
 #entry {
-  font-size: 20px;
+  font-size: 1rem;
+}
+
+.definition {
+  padding: 0.2rem;
+  padding-bottom: 0rem;
+}
+
+.explaination {
+  margin: 0.25rem;
+  margin-left: 1rem;
+
+}
+
+.definition:hover {
+  color: #2d3131;
+  background-color: #fcfcfc;
+  border-radius: 3px;
 }
