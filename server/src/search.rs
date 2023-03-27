@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::error::Error;
 use std::fs::File;
-use dotenv::dotenv;
 use anyhow::Context;
 use std::io::prelude::*;
 
@@ -38,7 +37,6 @@ pub struct Session {
 
 impl Session {
     pub fn new() -> Result<Session, Box<dyn Error>> {
-        dotenv().ok();
         println!("opening the cert file");
         let mut f = File::open(CERT_PATH).context("failed to open certificate from path")?;
         let mut buf = Vec::new();

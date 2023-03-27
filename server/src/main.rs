@@ -1,5 +1,6 @@
 use clap::Parser as ClapParser;
 use std::str::FromStr;
+use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use korean_dict_server::csv_parser;
 use korean_dict_server::parser::Parser as KrParser;
 use korean_dict_server::parser::ParserKind;
@@ -14,10 +15,10 @@ use axum::{
 };
 use axum_extra::routing::SpaRouter;
 use serde::{Serialize, Deserialize};
+use dotenvy::dotenv;
 
-extern crate pretty_env_logger;
-#[macro_use] extern crate log;
-use std::net::{IpAddr, Ipv6Addr, SocketAddr};
+#[macro_use]
+extern crate log;
 
 // Setup the command line interface with clap.
 #[derive(ClapParser, Debug)]
@@ -48,7 +49,9 @@ struct FileData {
 #[tokio::main]
 async fn main() {
 
-    pretty_env_logger::init();
+
+    dotenv().ok();
+    env_logger::init();
     info!("such information");
 
     let opt = Opt::parse();
