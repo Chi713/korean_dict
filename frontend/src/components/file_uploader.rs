@@ -142,8 +142,6 @@ pub fn file_component(props: &SentenceListProps) -> Html {
     html! {
         <div id="wrapper">
                 
-            //<p id="title">{ "Upload Your Files To The Cloud" }</p>
-                
             <label for="file-upload">
                 <div
                     id="drop-container"
@@ -201,11 +199,6 @@ fn view_file(file: &FileDetails) -> Html {
     html! {
         <div class="preview-tile">
             <p class="preview-name">{ format!("{}", file.name) }</p>
-            /*
-            <div>
-                {format!("{}", &file.data)}
-            </div>
-            */
         </div>
     }
 }

@@ -9,6 +9,7 @@ body {
   padding: 0;
   background: #2d3131;
   color: #fcfcfc;
+  height: 100%;
 }
 
 p {
@@ -101,7 +102,10 @@ button:focus-visible {
 .entry-word {
   font-size: 1rem;
 }
-
+/*
+#entry-list {
+}
+*/
 #entry {
   font-size: 1rem;
 }
@@ -120,5 +124,12 @@ button:focus-visible {
 .definition:hover {
   color: #2d3131;
   background-color: #fcfcfc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.selected {
+  color: #2d3131;
+  background-color: #cccccc;
   border-radius: 3px;
 }

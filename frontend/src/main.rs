@@ -46,17 +46,17 @@ fn home() -> Html {
             log::debug!("sent from file uploader component: {:?}\n{:#?}", data.sentence, data.sentence_entries);
             file_uploader_data.set(data);
     })};
+    let body = if (*file_uploader_data) == RecievedData::default() {
+            html!{<FileUploader {sentences_cb}/> }
+        }else {
+            html!{ <SentenceViewer recieved_data={(*file_uploader_data).clone()} />}
+    };
+
 
     html! {
         <div>
             <h1 id="title">{"korean dictionary tool"}</h1>
-            if (*file_uploader_data) == RecievedData::default() {
-            <FileUploader {sentences_cb}/>
-            }else {
-            <SentenceViewer
-                sentence={(*file_uploader_data).clone().sentence}
-                sentence_entries={(*file_uploader_data).clone().sentence_entries}
-            />}
+            {body}
         </div>
     }
 }
