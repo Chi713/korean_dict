@@ -9,6 +9,8 @@ use std::fs::File;
 use anyhow::Context;
 use std::io::prelude::*;
 
+use dotenvy::dotenv;
+
 const CONCURRENT_REQUESTS: usize = 20;
 const CERT_PATH: &str = "resources/certs/krdict.pem";
 
@@ -37,6 +39,8 @@ pub struct Session {
 
 impl Session {
     pub fn new() -> Result<Session, Box<dyn Error>> {
+        dotenv().ok();
+
         println!("opening the cert file");
         let mut f = File::open(CERT_PATH).context("failed to open certificate from path")?;
         let mut buf = Vec::new();
