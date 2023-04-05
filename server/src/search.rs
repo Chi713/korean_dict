@@ -9,7 +9,6 @@ use std::fs::File;
 use anyhow::Context;
 use std::io::prelude::*;
 
-use dotenvy::dotenv;
 
 const CONCURRENT_REQUESTS: usize = 20;
 const CERT_PATH: &str = "resources/certs/krdict.pem";
@@ -39,7 +38,6 @@ pub struct Session {
 
 impl Session {
     pub fn new() -> Result<Session, Box<dyn Error>> {
-        dotenv().ok();
 
         println!("opening the cert file");
         let mut f = File::open(CERT_PATH).context("failed to open certificate from path")?;
@@ -124,14 +122,17 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dotenvy::dotenv;
 
     #[test]
     fn test_session_new() {
+        dotenv().ok();
         Session::new().unwrap();
     }
 
     #[tokio::test]
     async fn test_session_get() {
+        dotenv().ok();
         let query = "나무";
         let client = Session::new().unwrap();
         let response = client.get(query.to_owned()).await.unwrap();
@@ -151,6 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_get_list() {
+        dotenv().ok();
         let query = vec!["공항".to_owned(), "기다리다".to_owned()];
         let client = Session::new().unwrap();
         let response = client.get_list(query).await.unwrap();
