@@ -123,6 +123,7 @@ impl Session {
 mod tests {
     use super::*;
     use dotenvy::dotenv;
+    use serial_test::serial;
 
     #[test]
     fn test_session_new() {
@@ -131,11 +132,12 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_session_get() {
         dotenv().ok();
-        let query = "나무";
+        let query = "나무".to_owned();
         let client = Session::new().unwrap();
-        let response = client.get(query.to_owned()).await.unwrap();
+        let response = client.get(query).await.unwrap();
         assert_eq!(
             response,
             Entry {
@@ -151,6 +153,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_session_get_list() {
         dotenv().ok();
         let query = vec!["공항".to_owned(), "기다리다".to_owned()];
