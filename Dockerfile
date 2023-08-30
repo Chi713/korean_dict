@@ -1,39 +1,47 @@
-FROM pytorch/pytorch:latest
+FROM python:3 as khaiii_builder
 
-RUN apt-get update && apt-get install -y build-essential git curl openssl
-#RUN git clone https://github.com/Chi713/korean_dict_py.git
+RUN apt-get update && apt-get install -y build-essential git curl
 RUN git clone https://github.com/Chi713/khaiii.git
-WORKDIR /workspace/khaiii
-
+WORKDIR /khaiii
 RUN pip install cython cmake
 RUN pip install --upgrade pip
-#RUN pip install -r requirements.txt
-
 RUN mkdir build
-WORKDIR /workspace/khaiii/build
-
+WORKDIR /khaiii/build
 #make and install khaiii
-RUN cmake ..
+RUN cmake -E env CXXFLAGS="-w" cmake ..
 RUN make all
 RUN make resource
 RUN make install
 RUN make package_python
-WORKDIR /workspace/khaiii/build/package_python/
-RUN pip install /workspace/khaiii/build/package_python/
+WORKDIR /khaiii/build/package_python/
 
-RUN apt-get update -y
-RUN apt-get install -y language-pack-ko
-RUN locale-gen en_US.UTF-8
-RUN update-locale LANG=en_US.UTF-8
-
-RUN pip install certifi prettyprint aiohttp
-RUN mkdir /workspace/korean_dict_py
-WORKDIR /workspace/korean_dict_py
+FROM rust:1.71-bookworm as rust_builder
+RUN apt-get update && apt-get install -y build-essential
+RUN apt-get install -y python3 python3-pip
+ENV SQLX_OFFLINE=true
+WORKDIR /korean_dict
 COPY .. .
-#RUN touch .apikey
+WORKDIR /korean_dict
+RUN cargo build -p korean_dict_server --release
+RUN rustup target add wasm32-unknown-unknown
+WORKDIR /korean_dict/frontend
+RUN cargo install trunk
+RUN trunk build --public-url /
 
-#RUN cat certs/krdict.pem >> /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem
-#RUN cp /opt/conda/lib/python3.8/site-packages/certifi/cacert.pem certs/
-#CMD ["python", "/workspace/korean_dict_py/testSSL.py"]
-CMD ["python", "/workspace/korean_dict_py/index.py"]
-#CMD ["ls","/workspace/korean_dict_py"]
+FROM python:3
+RUN apt-get update -y
+#RUN apt-get install -y language-pack-ko
+#install khaiii
+RUN pip install cython cmake
+RUN pip install --upgrade pip
+ENV CXXFLAGS="-w"
+COPY --from=khaiii_builder /khaiii /khaiii
+WORKDIR /khaiii/build/package_python/
+RUN pip install /khaiii/build/package_python/
+#copy over server binary
+WORKDIR /korean_dict
+COPY --from=rust_builder /korean_dict/target/release/korean_dict_server /korean_dict
+RUN mkdir /korean_dict/dist
+COPY --from=rust_builder /korean_dict/dist /korean_dict/dist
+ENTRYPOINT ["/korean_dict_server","--static-dir", "./dist"]
+EXPOSE 3000
