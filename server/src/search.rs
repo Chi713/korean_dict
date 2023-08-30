@@ -11,7 +11,7 @@ use std::io::prelude::*;
 
 
 const CONCURRENT_REQUESTS: usize = 20;
-const CERT_PATH: &str = "resources/certs/krdict.pem";
+const CERT_PATH: &str = "../resources/certs/krdict.pem";
 
 #[derive(Debug, Clone, PartialEq,Deserialize, Serialize)]
 pub struct Entry {

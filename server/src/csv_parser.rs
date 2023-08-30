@@ -98,7 +98,7 @@ mod tests {
     use std::fs;
     #[test]
     fn test_csv_parse() {
-        let file_data = fs::read_to_string("./resources/test.tsv").unwrap();
+        let file_data = fs::read_to_string("../resources/test.tsv").unwrap();
         let csv_data = csv_parse(&file_data).unwrap();
         let test_data_first: HashMap<String, String> = HashMap::from([
             ("tag".into(), "bite_sisters_10".into()),

@@ -1,6 +1,7 @@
-use pyo3::prelude::*;
 use std::error::Error;
 use std::collections::HashSet;
+use std::process::Command;
+use serde_json;
 
 const EXCEPTIONS: &[&str] = &[
     "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC", "SP", "SF", "SE", "SS", "EC",
@@ -11,7 +12,7 @@ const EXCEPTIONS: &[&str] = &[
 pub enum ParserKind {
     Khaiii,
     #[default]
-    Komoran,
+    Komoran
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -33,38 +34,13 @@ impl Parser {
         }
     }
 
-    //slient error being handled here MAKE SURE TO FIX
     pub fn change_parser(mut self, parser: ParserKind) -> Result<Self, Box<dyn Error>> {
-        let flag = Self::has_khaiii()?;
-        let parser = match (parser, flag) {
-            (ParserKind::Khaiii, true) => ParserKind::Khaiii,
-            (ParserKind::Khaiii, false) => {
-                println!("Khaiii not found, initializing parser with Komoran");
-                ParserKind::Komoran
-            },
-            (ParserKind::Komoran, _) => ParserKind::Komoran,
+        let parser = match parser {
+            ParserKind::Khaiii => ParserKind::Khaiii,
+            ParserKind::Komoran => ParserKind::Komoran,
         };
         self.parser = parser;
         Ok(self)
-    }
-
-    pub fn has_khaiii() -> PyResult<bool> {
-        let res: PyResult<bool> = Python::with_gil(|py| {
-            let check = PyModule::from_code(
-                py,
-                "def check(*args):
-                try:
-                    import khaiii
-                    return True
-                except ImportError:
-                    return False",
-                "",
-                "",
-            )?;
-            let result = check.getattr("check")?.call0()?.extract()?;
-            Ok(result)
-        });
-        res
     }
 
     pub fn parser_type(&self) -> ParserKind {
@@ -73,24 +49,20 @@ impl Parser {
     }
 }
 
-//can only be used strictly synchronously
+// can only be used strictly synchronously
 fn komoran_parse(sentence: &str) -> Result<Vec<String>, Box<dyn Error>> {
-    let result: Vec<(String, String)> = Python::with_gil(|py| {
-        let fun = PyModule::from_code(
-            py,
-            "def parse(*arg):
-                from konlpy.tag import Komoran
-                return Komoran().pos(arg[0])",
-            "",
-            "",
-        )?;
+    let result_output = Command::new("python3")
+        .arg("py/komoran_parser.py")
+        .arg(sentence)
+        .output()
+        .expect("Command failed, sentence not parsed");
+    let result_json = String::from_utf8(result_output.stdout).unwrap();
+    let result_json = result_json.trim();
+    println!("result_json: {:?}",result_json);
+    let result: Vec<(String, String)> = serde_json::from_str(result_json).unwrap();
 
-        fun.getattr("parse")?.call1((sentence,))?.extract()
-    })?;
     let mut ex_tags: Vec<&str> = vec!["XPN", "NP", "VX"];
     ex_tags.extend(EXCEPTIONS.iter().copied());
-
-    //println!("res tag: {:?}", res);
 
     let filtered_result: Vec<(String, String)> = result
         .into_iter()
@@ -98,13 +70,12 @@ fn komoran_parse(sentence: &str) -> Result<Vec<String>, Box<dyn Error>> {
         .filter(|x| !ex_tags.contains(&x.1.as_str()))
         .collect();
 
-    let words_list: Vec<String> = remove_dup(word_shuffle(filtered_result));
+    let words_list: Vec<String> = remove_dup(komoran_word_processor(filtered_result));
 
     Ok(words_list)
 }
 
-//pls pls pls give me better name >_<
-fn word_shuffle(data: Vec<(String, String)>) -> Vec<String> {
+fn komoran_word_processor(data: Vec<(String, String)>) -> Vec<String> {
     let verb_tags = vec!["VV", "XSV", "XSA", "VA", "V"];
     let stem_tags = vec!["XSV", "XSA"];
 
@@ -126,22 +97,16 @@ fn word_shuffle(data: Vec<(String, String)>) -> Vec<String> {
 }
 
 fn khaiii_parse(sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
-    let result: Vec<Vec<(String, String)>> = Python::with_gil(|py| {
-        let fun = PyModule::from_code(
-            py,
-            "def parse(*arg):
-                from khaiii import KhaiiiApi
+    let result_output = Command::new("python3")
+        .arg("py/khaiii_parser.py")
+        .arg(sentence)
+        .output()
+        .expect("Command failed, sentence not parsed");
 
-                words_list = list()
-                for word in [w.morphs for w in KhaiiiApi().analyze(arg[0])]:
-                    words_list.append([(mor.lex, mor.tag) for mor in word])
-                return words_list",
-            "",
-            "",
-        );
-
-        fun?.getattr("parse")?.call1((sentence,))?.extract()
-    })?;
+    let result_json = String::from_utf8(result_output.stdout).unwrap();
+    let result_json = result_json.trim();
+    println!("result_json: {:?}",result_json);
+    let result: Vec<Vec<(String, String)>> = serde_json::from_str(result_json).unwrap();
 
     println!("res tag: {:?}", result);
 
@@ -153,7 +118,7 @@ fn khaiii_parse(sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
             .filter(|m| !ex_tags.contains(&m.1.as_str()))
             .filter(|m| !has_ban_morph(m))
             .collect();
-        word_salad_shuffle(word_filtered)
+        khaiii_word_processor(word_filtered)
     })
     .collect();
 
@@ -162,8 +127,7 @@ fn khaiii_parse(sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
     Ok(words_list)
 }
 
-//pls pls pls rename function >_<
-fn word_salad_shuffle(data: Vec<(String, String)>) -> Vec<String> {
+fn khaiii_word_processor(data: Vec<(String, String)>) -> Vec<String> {
     let verb_tags = vec!["VV", "VA", "XSV", "XSA"];
     let stem_tags = vec!["XSV", "XSA"];
 
@@ -202,15 +166,14 @@ fn has_ban_morph(word: &(String, String)) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
-
+     
     #[test]
     fn test_parser_new() {
         let parser = Parser::new();
         assert_eq!(
             parser,
             Parser {
-                parser: ParserKind::Komoran
+                parser: ParserKind::Komoran,
             }
         );
     }
@@ -224,15 +187,10 @@ mod tests {
     #[test]
     fn test_change_parser() {
         let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
-        if Parser::has_khaiii().unwrap() {
-            assert_eq!(parser.parser_type(), ParserKind::Khaiii);
-        } else {
-            assert_eq!(parser.parser_type(), ParserKind::Komoran);
-        }
+        assert_eq!(parser.parser_type(), ParserKind::Khaiii);
     }
 
     #[test]
-    #[serial]
     fn test_komoran_parser() {
         let parser = Parser::new().change_parser(ParserKind::Komoran).unwrap();
         let test_sentence = "안녕, 세상.";
@@ -241,7 +199,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_komoran_parser2() {
         let parser = Parser::new();
         let test_sentence = "제 친구 정우가 공항에서 저와 줄리아를 기다리고 있었어요.";
@@ -259,7 +216,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_komoran_parser3() {
         let parser = Parser::new();
         let test_sentence = "생각하다";
@@ -268,7 +224,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_komoran_parser4() {
         let parser = Parser::new();
         let test_sentence = "생각을 하다";
@@ -277,7 +232,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_komoran_parser5() {
         let parser = Parser::new();
         let test_sentence = "다시 또 다시";
@@ -286,20 +240,19 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_khaiii_parser() {
-        if Parser::has_khaiii().unwrap() {
+        // if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
             let test_sentence = "안녕, 새상.";
             let res = parser.parse(test_sentence).unwrap();
             assert_eq!(res, ["안녕".to_owned(), "새상".to_owned()]);
-        }
+        // }
     }
 
     //test 2-4 check if all of the appropriate particles are discarded and proper stems are applied to verbs
     #[test]
     fn test_khaiii_parser2() {
-        if Parser::has_khaiii().unwrap() {
+        // if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
             let test_sentence =
                 "제 친구 정우가 공항에서 저와 줄리아를 기다리고 있었어요.";
@@ -308,36 +261,36 @@ mod tests {
                 res,
                 ["친구".to_owned(), "공항".to_owned(), "기다리다".to_owned()]
             );
-        }
+        // }
     }
 
     #[test]
     fn test_khaiii_parser3() {
-        if Parser::has_khaiii().unwrap() {
+        // if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
             let test_sentence = "생각하다";
             let res = parser.parse(test_sentence).unwrap();
             assert_eq!(res, ["생각하다".to_owned()]);
-        }
+        // }
     }
 
     #[test]
     fn test_khaiii_parser4() {
-        if Parser::has_khaiii().unwrap() {
+        // if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
             let test_sentence = "생각을 하다";
             let res = parser.parse(test_sentence).unwrap();
             assert_eq!(res, ["생각".to_owned()]);
-        }
+        // }
     }
 
     #[test]
     fn test_khaiii_parser5() {
-        if Parser::has_khaiii().unwrap() {
+        // if Parser::has_khaiii().unwrap() {
             let parser = Parser::new().change_parser(ParserKind::Khaiii).unwrap();
             let test_sentence = "다시 시작해, 다시";
             let res = parser.parse(test_sentence).unwrap();
             assert_eq!(res, ["다시".to_owned(), "시작하다".to_owned()]);
-        }
+        // }
     }
 }
