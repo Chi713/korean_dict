@@ -9,4 +9,4 @@ trunk build --public-url /
 popd
 
 (trap 'kill 0' SIGINT; \
-bash -c  'cargo run --bin korean_dict_server --release -- --port 8080 --static-dir ./dist')
+bash -c  'cargo run -- --port 8080 --static-dir ./dist')

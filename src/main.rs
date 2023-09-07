@@ -1,6 +1,7 @@
 use clap::Parser as ClapParser;
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
+use std::sync::Arc;
 use korean_dict_server::csv_parser;
 use korean_dict_server::parser::Parser as KrParser;
 use korean_dict_server::parser::ParserKind;
@@ -11,14 +12,14 @@ use axum::{
     Router,
     routing::{get, post},
     Json,
-    response::IntoResponse
+    Extension,
+    response::{Html, IntoResponse},
 };
-use axum_extra::routing::SpaRouter;
 use serde::{Serialize, Deserialize};
 use dotenvy::dotenv;
-
-#[macro_use]
-extern crate log;
+use log::info;
+use tower_http::services::ServeDir;
+use tera::{Tera, Context};
 
 // Setup the command line interface with clap.
 #[derive(ClapParser, Debug)]
@@ -28,7 +29,7 @@ struct Opt {
     #[clap(short = 'l', long = "log", default_value = "debug")]
     log_level: String,
     /// set the listen addr
-    #[clap(short = 'a', long = "addr", default_value = "::1")]
+    #[clap(short = 'a', long = "addr", default_value = "127.0.0.1")]
     addr: String,
 
     /// set the listen port
@@ -60,11 +61,16 @@ async fn main() {
         opt.port,
     ));
 
-    let index = SpaRouter::new("/", &opt.static_dir);
+    let tera = Tera::new("templates/**/*.html").unwrap();
+    // let tera = Tera::default();
+    // tera.add_raw_templates(vec!["index.html", include_str!("../../templates/index.html")]);
+
     let app = Router::new()
+        .route("/", get(index))
+        .route("/test", get(index))
         .route("/api/fileData", post(process_file_data))
-        .route("/api/", get(hello))
-        .merge(index);
+        .nest_service("/favicon.ico", ServeDir::new("assets/favicon.ico"))
+        .layer(Extension(Arc::new(tera)));
 
     info!("listening on http://{}", sock_addr);
 
@@ -74,8 +80,11 @@ async fn main() {
         .unwrap();
 }
 
-async fn hello() -> impl IntoResponse {
-    "hello from server! You tested the server api response."
+async fn index(
+    Extension(templates): Extension<Arc<Tera>>,
+) -> impl IntoResponse {
+    let context = Context::new();
+    Html(templates.render("index.html", &context).unwrap())
 }
 
 #[derive(Serialize, Deserialize, Debug)]
