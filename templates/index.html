@@ -8,9 +8,18 @@
 
     <body>	
 
-	<h1>Template</h1>
+	<h1>korean dictionary tool</h1>
   
-	<p>This is a blank template for a web page with htmx.</p>
-  
+	<form action="api/fileData" method="post" enctype="multipart/form-data" hx-boost="true" >
+	    <div>
+	    <label for="data">File</label>
+	    <input type="file" name="data" id="data" accept=".srt" required/> 
+	    </div>
+	    <div>
+	    <label for="retimer">Retime the SRT file</label>
+	    <input type="checkbox" name="retimer" id="retimer"/>
+	    </div>
+	    <button type="submit">Submit</button>
+	</form>
     </body>
 </html>

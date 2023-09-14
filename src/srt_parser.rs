@@ -5,12 +5,12 @@ pub struct Srt {
     pub subtitles: Vec<Subtitle>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Subtitle {
-    id: isize,
-    time_start: SrtTime,
-    time_end: SrtTime,
-    text: String,
+    pub order: i64,
+    pub time_start: SrtTime,
+    pub time_end: SrtTime,
+    pub text: String,
 }
 
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
@@ -22,23 +22,23 @@ pub struct SrtTime {
 }
 
 impl Srt {
-    // pub fn retime(&mut self) {
-    //
-    //     let mut prev_time_start = SrtTime::default();
-    //     for subtitle in self.subtitles.iter_mut().rev() {
-    //         if prev_time_start != SrtTime::default(){
-    //             subtitle.time_end = prev_time_start;
-    //         }
-    //         prev_time_start = subtitle.time_start; 
-    //     }
-    //     
-    // }
+    pub fn retime(&mut self) {
+
+        let mut prev_time_start = SrtTime::default();
+        for subtitle in self.subtitles.iter_mut().rev() {
+            if prev_time_start != SrtTime::default(){
+                subtitle.time_end = prev_time_start;
+            }
+            prev_time_start = subtitle.time_start; 
+        }
+        
+    }
 
     pub fn build(self) -> String {
         let mut output: String = String::default();
         for subtitle in self.subtitles {
             let time = format!("{} --> {}",subtitle.time_start.render(), subtitle.time_end.render());
-            let sub = format!("{}\r\n{}\r\n{}\r\n\r\n", subtitle.id, time, subtitle.text);
+            let sub = format!("{}\r\n{}\r\n{}\r\n\r\n", subtitle.order, time, subtitle.text);
             output.push_str(&sub);
         }
 
@@ -53,7 +53,7 @@ impl Subtitle {
         .map(|n| n.to_string())
         .collect();
 
-        let id = subtitle[0].trim().parse::<isize>()?;
+        let order = subtitle[0].trim().parse::<i64>()?;
 
         let time: Vec<&str> = subtitle[1].trim().split(" --> ").collect();
         let time_start = SrtTime::parse(time[0])?;
@@ -66,7 +66,7 @@ impl Subtitle {
             .to_string();
 
         Ok(Subtitle {
-            id,
+            order,
             time_start,
             time_end,
             text

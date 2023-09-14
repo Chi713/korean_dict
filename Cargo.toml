@@ -1,5 +1,5 @@
 [package]
-name = "korean_dict_server"
+name = "korean_dict"
 version = "0.1.0"
 authors = ["Chris Hoskin <chris.hoskin2355@gmail.com>"]
 edition = "2021"
@@ -7,21 +7,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.11", default-features = false, features = ["default-tls"] }
 futures = "0.3"                                    # for our async / await blocks
 tokio = { version = "1", features = ["full"] }     # for our async runtime
 roxmltree = "0.14"
 csv = "1.1"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.188", features = ["derive"] }
 serde_json = { version = "1.0"}
 env_logger = "0.10"
 log = "0.4"
-axum = "0.6"
+axum = {version = "0.6", features = ["multipart"]}
 clap = { version = "4.1.8", features = ["derive"] }
 dotenvy = "0.15.7"
 anyhow = "1.0.70"
 tower-http = {version = "0.4", features = ["fs"] }
 tera = "1.19.1"
+sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-rustls", "sqlite" ] }
 
 [dev-dependencies]
 serial_test = "0.7"
