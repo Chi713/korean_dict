@@ -43,5 +43,5 @@ WORKDIR /korean_dict
 COPY --from=rust_builder /korean_dict/target/release/korean_dict_server /korean_dict
 RUN mkdir /korean_dict/dist
 COPY --from=rust_builder /korean_dict/dist /korean_dict/dist
-ENTRYPOINT ["/korean_dict_server","--static-dir", "./dist"]
+ENTRYPOINT ["/korean_dict_server","-a","0.0.0.0","--static-dir", "./dist"]
 EXPOSE 3000
