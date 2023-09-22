@@ -2,70 +2,18 @@ use csv::ReaderBuilder;
 use std::collections::HashMap;
 use std::error::Error;
 use std::iter::zip;
-use std::option::Option;
 
 #[derive(Debug)]
 pub struct CsvData {
     pub data: Vec<HashMap<String, String>>,
-    index: usize,
-    size: usize,
-    next_state: bool,
-    prev_state: bool,
 }
 
 impl CsvData {
     fn new(data: Vec<HashMap<String, String>>) -> CsvData {
-        //let index = 0;
-        //let next_state = true;
-        //let prev_state = false;
-        let size = data.len();
         Self {
             data,
-            index: 0,
-            size,
-            next_state: true,
-            prev_state: false,
         }
     }
-
-    /*
-    * I Didn't implement this next function as an Iterator type because the next function doesn't
-    * behave as you would expect an iterator on a Vec would. The first return value next on normal lists
-    * turned into Iterators is the first value in the Vec but this returns the second leading to
-    * wierd behavior
-    */
-    
-    pub fn next_val(&mut self) -> Option<HashMap<String, String>> {
-        if !self.next_state {
-           return None
-        }
-        self.index += 1;
-
-        if (self.index + 1) == self.size {
-            self.next_state = false;
-        }
-        //for the love of the memory efficiency gods fix this unholy copying owing atrocity
-        Some(self.data[self.index].clone())
-
-    }
-
-
-    pub fn prev_val(&mut self) -> Option<HashMap<String, String>> {
-        if !self.prev_state {
-            return None
-        }
-        self.index -=1;
-
-        if self.index == 0 {
-            self.prev_state = false;
-        }
-        Some(self.data[self.index].clone())
-    }
-
-    pub fn current_val(&mut self) -> HashMap<String, String> {
-        self.data[self.index].clone()
-    }
-
 }
 
 pub fn csv_parse(stream_data: &str) -> Result<CsvData, Box<dyn Error + Send + Sync>> {

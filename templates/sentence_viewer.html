@@ -1,19 +1,15 @@
-<div>
-Srt id:
-{{ srt_id}}
-    <ul>
-	{% for word_entry in words_list %} 
+<ul>
+    {% for word_entry in words_list %} 
+    <li>
+	<strong>{{word_entry.word}}</strong>
+	<ol>
+	{% for definition in word_entry.definition %}
 	<li>
-	    <strong>{{word_entry.word}}</strong>
-	    <ol>
-	    {% for definition, explaination in word_entry %}
-		<li>
-		    <div>{{ definition }}</div>
-		    <div>{{ explaination }}</div>
-		</li>
-	    {% endfor %}
-	    </ol>
-        </li>
+		<div>{{ definition.0 }}</div>
+		<div>{{ definition.1 }}</div>
+	</li>
 	{% endfor %}
-    </ul>
-</div>
+	</ol>
+    </li>
+    {% endfor %}
+</ul>

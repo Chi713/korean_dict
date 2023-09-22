@@ -2,11 +2,6 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-pushd frontend
-# note: when using SpaRouter this needs to be
-#   "trunk build --public-url /"
-trunk build --public-url /
-popd
-
 (trap 'kill 0' SIGINT; \
-bash -c  'cargo run -- --port 8080 --static-dir ./dist')
+bash -c  'cargo watch -- cargo run --release -- --port 8080 --static-dir ../htmx-frontend')
+

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+    Csv id:{{ csv_id}}
+    <h2>{{tl_sentence}}</h2>
+    <h3>{{nl_sentence}}</h3>
+    <div hx-get="sentence-viewer?csv_id={{csv_id}}&sentence={{sentence_order}}" 
+	hx-trigger="load"
+	hx-swap="outerHTML">
+	<p class="htmx-indicator">loading in from dictionary...</p>
+    </div>
+    <div>
+	{% if sentence_order != 1 %}
+	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order-1}}" 
+	    hx-target="#content"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    >
+	    prev
+	</button>
+	{% endif %}
+	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order+1}}"
+	    hx-target="#content"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    >
+	    next
+	</button>
+    </div>
+{% endblock content %}

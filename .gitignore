@@ -5,6 +5,7 @@ src/koreanDict.egg-info
 __pycache__
 dist
 venv
+database.*
 
 # Added by cargo
 

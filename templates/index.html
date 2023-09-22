@@ -1,25 +1,12 @@
-<!DOCTYPE html>
-<html>
-    <head>
+{% extends "base.html" %}
+    {% block content %}
+    <h1>korean dictionary tool</h1>
 
-    </head>
-    <script src="https://unpkg.com/htmx.org@1.9.5" integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO" crossorigin="anonymous"></script>
-
-
-    <body>	
-
-	<h1>korean dictionary tool</h1>
-  
-	<form action="api/fileData" method="post" enctype="multipart/form-data" hx-boost="true" >
-	    <div>
+    <form action="api/fileData" method="post" enctype="multipart/form-data" hx-boost="true" >
+	<div>
 	    <label for="data">File</label>
-	    <input type="file" name="data" id="data" accept=".srt" required/> 
-	    </div>
-	    <div>
-	    <label for="retimer">Retime the SRT file</label>
-	    <input type="checkbox" name="retimer" id="retimer"/>
-	    </div>
-	    <button type="submit">Submit</button>
-	</form>
-    </body>
-</html>
+	    <input type="file" name="data" id="data" accept=".tsv" required/> 
+	</div>
+	<button type="submit">Submit</button>
+    </form>
+    {% endblock content %}
