@@ -81,6 +81,7 @@ async fn main() {
         .merge(routes::views::sentence_viewer())
         .merge(routes::views::flashcard_entry_post())
         .merge(routes::views::flashcard_entry_patch())
+        .merge(routes::views::flashcard_entry_delete())
         .with_state(db)
         .merge(routes::index::index())
         .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"))

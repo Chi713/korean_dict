@@ -7,7 +7,7 @@ use axum::{
     extract::{Query, State, Form},
     Router,
     http::StatusCode,
-    routing::{get, post, patch},
+    routing::{get, post, patch, delete},
     Extension,
     response::{Html, IntoResponse},
 };
@@ -180,7 +180,9 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
         let flashcard_entry = sqlx::query_as::<_,database::FlashcardEntriesEntry>(r#"
             INSERT INTO flashcard_entries (
                 csv_row_id, word, definition
-            ) VALUES (?, ?, ? );"# 
+            ) 
+            VALUES (?, ?, ? )
+            RETURNING * ;"# 
         ).bind(&data.csv_row_id)
             .bind(&data.word)
             .bind(&data.definition)
@@ -190,8 +192,8 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
 
         let sentence = sqlx::query_as::<_,database::CsvRowEntry>(r#"
                 SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
-                FROM csv_row WHERE csv_row_id = ?;"#)
-            .bind(&flashcard_entry.csv_row_id)
+                FROM csv_row WHERE csv_row_id = ? ;"#)
+            .bind(&data.csv_row_id)
             .fetch_one(&db)
             .await
             .unwrap();
@@ -231,8 +233,8 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
 
         let sentence = sqlx::query_as::<_,database::CsvRowEntry>(r#"
                 SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
-                FROM csv_row WHERE csv_row_id = ?;"#)
-            .bind(&flashcard_entry.csv_row_id)
+                FROM csv_row WHERE csv_row_id = ? ;"#)
+            .bind(&data.csv_row_id)
             .fetch_one(&db)
             .await
             .unwrap();
@@ -248,4 +250,43 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
     }
     Router::new()
         .route("/view", patch(handler))
+}
+
+pub fn flashcard_entry_delete() -> Router<SqlitePool>{
+    async fn handler(
+        State(db): State<SqlitePool>,
+        Extension(templates): Extension<Arc<Tera>>,
+        Form(data): Form<FlashCardResponse>
+    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+
+        println!("{:?}", &data);
+        sqlx::query(r#"
+            DELETE FROM flashcard_entries 
+            WHERE csv_row_id = ? ;"# 
+        ).bind(&data.csv_row_id)
+            .execute(&db)
+            .await
+            .unwrap();
+
+        let sentence = sqlx::query_as::<_,database::CsvRowEntry>(r#"
+                SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
+                FROM csv_row WHERE csv_row_id = ? ;"#)
+            .bind(&data.csv_row_id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+
+        let flashcard_entry = database::FlashcardEntriesEntry::default();
+
+        let mut context = Context::new();
+        context.insert("csv_id", &sentence.csv_id);
+        context.insert("tl_sentence", &sentence.tl_subs);
+        context.insert("nl_sentence", &sentence.nl_subs);
+        context.insert("sentence_order", &sentence.row_order);
+        context.insert("csv_row_id", &sentence.csv_row_id);
+        context.insert("flashcard_entry", &flashcard_entry);
+        Ok(Html(templates.render("view.html", &context).unwrap()))
+    }
+    Router::new()
+        .route("/view", delete(handler))
 }

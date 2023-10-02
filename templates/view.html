@@ -5,12 +5,7 @@
 
     {% if flashcard_entry.word == "" %}
 
-    <form action="view" method="post" id="flashcard_entry"
-	hx-boost="true" 
-	hx-swap="OuterHTML"
-	hx-target="#content"
-	hx-push-url="false"
-	>
+    <form id="flashcard_entry" autocomplete="off" >
 	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
 	<label for="word">Word</label>
 	<input type="text" name="word" id="word" value="" required/>
@@ -18,18 +13,21 @@
 	<label for="definition">Definition</label>
 	<input type="text" name="definition" id="definition" value="" required/>
 
-	<button type="submit">Save</button>
+	<button type="submit" hx-post="view"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="body"
+	hx-push-url="false"
+	>Save</button>
+
 	<button>Clear</button>
+
     </form>
     <div id="sentence-input-response"></div>
 
     {% else %}
 
-    <form action="view" method="post" id="flashcard_entry"
-	hx-boost="true" 
-	hx-swap="OuterHTML"
-	hx-target="#content"
-	hx-push-url="false"
+    <form id="flashcard_entry" autocomplete="off"
 	>
 	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
 	<label for="word">Word</label>
@@ -38,8 +36,21 @@
 	<label for="definition">Definition</label>
 	<input type="text" name="definition" id="definition" value="{{flashcard_entry.definition}}" required/>
 
-	<button type="submit" hx-patch="view">Save</button>
+	<button type="submit" hx-patch="view"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="body"
+	hx-push-url="false"
+	>Save</button>
+
 	<button>Clear</button>
+
+	<button type="submit" hx-delete="view"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="body"
+	hx-push-url="false"
+	>delete</button>
     </form>
     <div id="sentence-input-response"></div>
     {% endif %}
