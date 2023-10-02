@@ -1,17 +1,12 @@
 use clap::Parser as ClapParser;
 use std::str::FromStr;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
-use std::sync::Arc;
 use std::env;
 use korean_dict::routes;
-use axum::{
-    Router,
-    Extension,
-};
+use axum::Router;
 use dotenvy::dotenv;
 use log::info;
 use tower_http::services::ServeDir;
-use tera::Tera;
 use sqlx::{migrate::MigrateDatabase ,Sqlite, SqlitePool};
 
 // Setup the command line interface with clap.
@@ -74,7 +69,8 @@ async fn main() {
     }
 
     // bring in html templates
-    let tera = Tera::new("templates/**/*.html").unwrap();
+    // let tera = Tera::new("templates/**/*.html").unwrap();
+
     let app = Router::new()
         .merge(routes::csv_processing::process_file_data())
         .merge(routes::views::view())
@@ -84,8 +80,7 @@ async fn main() {
         .merge(routes::views::flashcard_entry_delete())
         .with_state(db)
         .merge(routes::index::index())
-        .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"))
-        .layer(Extension(Arc::new(tera)));
+        .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"));
 
     info!("listening on http://{}", sock_addr);
 

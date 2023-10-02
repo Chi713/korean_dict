@@ -1,22 +1,19 @@
-use std::sync::Arc;
 use crate::parser::Parser as KrParser;
 use crate::parser::{LanguageParser, KhaiiiParser};
 use crate::search::Session;
 use super::database;
+use super::templates::{ViewTemplate, SentenceViewerTemplate};
 use axum::{
     extract::{Query, State, Form},
     Router,
     http::StatusCode,
     routing::{get, post, patch, delete},
-    Extension,
-    response::{Html, IntoResponse},
+    response::IntoResponse,
 };
 use serde::Deserialize;
-use tera::{Tera, Context};
 use sqlx::{Sqlite, SqlitePool, QueryBuilder};
 
 const BIND_LIMIT: usize = 65535;
-
 
 #[derive(Debug, Deserialize)]
 struct SentenceViewerParams {
@@ -27,7 +24,6 @@ struct SentenceViewerParams {
 pub fn view() -> Router<SqlitePool> {
     async fn handler(
         State(db): State<SqlitePool>,
-        Extension(templates): Extension<Arc<Tera>>,
         Query(params): Query<SentenceViewerParams> 
     ) -> Result<impl IntoResponse, (StatusCode, String)> {
         let csv_id = params.csv_id;
@@ -59,14 +55,14 @@ pub fn view() -> Router<SqlitePool> {
             None => database::FlashcardEntriesEntry::default()
         };
 
-        let mut context = Context::new();
-        context.insert("csv_id", &csv_id);
-        context.insert("tl_sentence", &sentence.tl_subs);
-        context.insert("nl_sentence", &sentence.nl_subs);
-        context.insert("sentence_order", &sentence.row_order);
-        context.insert("csv_row_id", &sentence.csv_row_id);
-        context.insert("flashcard_entry", &flashcard);
-        Ok(Html(templates.render("view.html", &context).unwrap()))
+        Ok(ViewTemplate {
+            csv_id,
+            csv_row_id: sentence.csv_row_id,
+            tl_sentence: sentence.tl_subs,
+            nl_sentence: sentence.nl_subs,
+            sentence_order: sentence.row_order,
+            flashcard_entry: flashcard,
+        })
     }
 
     Router::new()
@@ -76,7 +72,7 @@ pub fn view() -> Router<SqlitePool> {
 pub fn sentence_viewer() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
-        Extension(templates): Extension<Arc<Tera>>,
+        // Extension(templates): Extension<Arc<Tera>>,
         Query(params): Query<SentenceViewerParams> 
     ) -> Result<impl IntoResponse, (StatusCode, String)> {
         let csv_id = params.csv_id;
@@ -152,9 +148,9 @@ pub fn sentence_viewer() -> Router<SqlitePool>{
         let searched_words_list = client.get_list(parsed_sentence).await.unwrap();
         println!("Searched words list: {:#?}", searched_words_list);
 
-        let mut context = Context::new();
-        context.insert("words_list", &searched_words_list);
-        Ok(Html(templates.render("sentence_viewer.html", &context).unwrap()))
+        Ok(SentenceViewerTemplate {
+            words_list: searched_words_list
+        })
     }
 
     Router::new()
@@ -172,7 +168,7 @@ struct FlashCardResponse {
 pub fn flashcard_entry_post() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
-        Extension(templates): Extension<Arc<Tera>>,
+        // Extension(templates): Extension<Arc<Tera>>,
         Form(data): Form<FlashCardResponse>
     ) -> Result<impl IntoResponse, (StatusCode, String)> {
 
@@ -197,15 +193,15 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
             .fetch_one(&db)
             .await
             .unwrap();
+        Ok(ViewTemplate {
+            csv_id: sentence.csv_id,
+            csv_row_id: sentence.csv_row_id,
+            tl_sentence: sentence.tl_subs,
+            nl_sentence: sentence.nl_subs,
+            sentence_order: sentence.row_order,
+            flashcard_entry,
+        })
 
-        let mut context = Context::new();
-        context.insert("csv_id", &sentence.csv_id);
-        context.insert("tl_sentence", &sentence.tl_subs);
-        context.insert("nl_sentence", &sentence.nl_subs);
-        context.insert("sentence_order", &sentence.row_order);
-        context.insert("csv_row_id", &sentence.csv_row_id);
-        context.insert("flashcard_entry", &flashcard_entry);
-        Ok(Html(templates.render("view.html", &context).unwrap()))
     }
     Router::new()
         .route("/view", post(handler))
@@ -214,7 +210,7 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
 pub fn flashcard_entry_patch() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
-        Extension(templates): Extension<Arc<Tera>>,
+        // Extension(templates): Extension<Arc<Tera>>,
         Form(data): Form<FlashCardResponse>
     ) -> Result<impl IntoResponse, (StatusCode, String)> {
 
@@ -239,14 +235,14 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
             .await
             .unwrap();
 
-        let mut context = Context::new();
-        context.insert("csv_id", &sentence.csv_id);
-        context.insert("tl_sentence", &sentence.tl_subs);
-        context.insert("nl_sentence", &sentence.nl_subs);
-        context.insert("sentence_order", &sentence.row_order);
-        context.insert("csv_row_id", &sentence.csv_row_id);
-        context.insert("flashcard_entry", &flashcard_entry);
-        Ok(Html(templates.render("view.html", &context).unwrap()))
+        Ok(ViewTemplate {
+            csv_id: sentence.csv_id,
+            csv_row_id: sentence.csv_row_id,
+            tl_sentence: sentence.tl_subs,
+            nl_sentence: sentence.nl_subs,
+            sentence_order: sentence.row_order,
+            flashcard_entry,
+        })
     }
     Router::new()
         .route("/view", patch(handler))
@@ -255,7 +251,7 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
 pub fn flashcard_entry_delete() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
-        Extension(templates): Extension<Arc<Tera>>,
+        // Extension(templates): Extension<Arc<Tera>>,
         Form(data): Form<FlashCardResponse>
     ) -> Result<impl IntoResponse, (StatusCode, String)> {
 
@@ -278,14 +274,14 @@ pub fn flashcard_entry_delete() -> Router<SqlitePool>{
 
         let flashcard_entry = database::FlashcardEntriesEntry::default();
 
-        let mut context = Context::new();
-        context.insert("csv_id", &sentence.csv_id);
-        context.insert("tl_sentence", &sentence.tl_subs);
-        context.insert("nl_sentence", &sentence.nl_subs);
-        context.insert("sentence_order", &sentence.row_order);
-        context.insert("csv_row_id", &sentence.csv_row_id);
-        context.insert("flashcard_entry", &flashcard_entry);
-        Ok(Html(templates.render("view.html", &context).unwrap()))
+        Ok(ViewTemplate {
+            csv_id: sentence.csv_id,
+            csv_row_id: sentence.csv_row_id,
+            tl_sentence: sentence.tl_subs,
+            nl_sentence: sentence.nl_subs,
+            sentence_order: sentence.row_order,
+            flashcard_entry,
+        })
     }
     Router::new()
         .route("/view", delete(handler))

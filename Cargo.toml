@@ -21,7 +21,8 @@ clap = { version = "4.1.8", features = ["derive"] }
 dotenvy = "0.15.7"
 anyhow = "1.0.70"
 tower-http = {version = "0.4", features = ["fs"] }
-tera = "1.19.1"
+askama = { version = "0.12", features = ["with-axum"]}
+askama_axum = "0.3"
 sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-rustls", "sqlite" ] }
 
 [dev-dependencies]
