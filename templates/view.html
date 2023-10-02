@@ -1,13 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-    Csv id:{{ csv_id}}
     <h2>{{tl_sentence}}</h2>
     <h3>{{nl_sentence}}</h3>
-    <div hx-get="sentence-viewer?csv_id={{csv_id}}&sentence={{sentence_order}}" 
+
+    {% if flashcard_entry.word == "" %}
+
+    <form action="view" method="post" id="flashcard_entry"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="#content"
+	hx-push-url="false"
+	>
+	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
+	<label for="word">Word</label>
+	<input type="text" name="word" id="word" value="" required/>
+
+	<label for="definition">Definition</label>
+	<input type="text" name="definition" id="definition" value="" required/>
+
+	<button type="submit">Save</button>
+	<button>Clear</button>
+    </form>
+    <div id="sentence-input-response"></div>
+
+    {% else %}
+
+    <form action="view" method="post" id="flashcard_entry"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="#content"
+	hx-push-url="false"
+	>
+	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
+	<label for="word">Word</label>
+	<input type="text" name="word" id="word" value="{{flashcard_entry.word}}" required/>
+
+	<label for="definition">Definition</label>
+	<input type="text" name="definition" id="definition" value="{{flashcard_entry.definition}}" required/>
+
+	<button type="submit" hx-patch="view">Save</button>
+	<button>Clear</button>
+    </form>
+    <div id="sentence-input-response"></div>
+    {% endif %}
+
+    <div id="dictionary_entries"
+	hx-get="sentence-viewer?csv_id={{csv_id}}&sentence={{sentence_order}}" 
 	hx-trigger="load"
 	hx-swap="outerHTML">
 	<p class="htmx-indicator">loading in from dictionary...</p>
     </div>
+
     <div>
 	{% if sentence_order != 1 %}
 	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order-1}}" 
@@ -18,6 +61,8 @@
 	    prev
 	</button>
 	{% endif %}
+	
+	{# make condition to not show this button on the last sentence #}
 	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order+1}}"
 	    hx-target="#content"
 	    hx-swap="outerHTML"

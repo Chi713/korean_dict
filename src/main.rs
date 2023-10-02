@@ -22,7 +22,7 @@ struct Opt {
     #[clap(short = 'l', long = "log", default_value = "debug")]
     log_level: String,
     /// set the listen addr
-    #[clap(short = 'a', long = "addr", default_value = "127.0.0.1")]
+    #[clap(short = 'a', long = "addr", default_value = "0.0.0.0")]
     addr: String,
 
     /// set the listen port
@@ -79,6 +79,8 @@ async fn main() {
         .merge(routes::csv_processing::process_file_data())
         .merge(routes::views::view())
         .merge(routes::views::sentence_viewer())
+        .merge(routes::views::flashcard_entry_post())
+        .merge(routes::views::flashcard_entry_patch())
         .with_state(db)
         .merge(routes::index::index())
         .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"))

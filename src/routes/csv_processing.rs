@@ -1,4 +1,3 @@
-use sqlx::{QueryBuilder, Pool};
 use crate::csv_parser;
 use super::database;
 use axum::{
@@ -8,7 +7,7 @@ use axum::{
     routing::post,
     response::Redirect,
 };
-use sqlx::{Sqlite, SqlitePool};
+use sqlx::{Sqlite, SqlitePool, QueryBuilder};
 
 const BIND_LIMIT: usize = 65535;
 
@@ -80,6 +79,5 @@ pub fn process_file_data() -> Router<SqlitePool> {
     }
 
     Router::new()
-        .route("/api/fileData", post(|db: State<Pool<Sqlite>>, 
-            multipart: Multipart| handler(db, multipart)))
+        .route("/api/fileData", post(handler))
 }
