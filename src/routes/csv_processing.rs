@@ -1,18 +1,22 @@
 use crate::csv_parser;
 use super::database;
 use axum::{
-    extract::{Multipart, State},
+    extract::{Multipart, State, Query},
     Router,
-    http::StatusCode,
-    routing::post,
-    response::Redirect,
+    http::{StatusCode, header},
+    routing::{get, post},
+    response::{Redirect, IntoResponse},
 };
 use sqlx::{Sqlite, SqlitePool, QueryBuilder};
+use serde::Deserialize;
 
 const BIND_LIMIT: usize = 65535;
 
 pub fn process_file_data() -> Router<SqlitePool> {
-    async fn handler(State(db): State<SqlitePool>, mut multipart: Multipart) -> Result<Redirect, (StatusCode, String)> {
+    async fn handler(
+        State(db): State<SqlitePool>, 
+        mut multipart: Multipart
+    ) -> Result<Redirect, (StatusCode, String)> {
         let mut csv_id = 0;
         while let Some(field) = multipart.next_field().await.unwrap() {
             println!("multipart interating");
@@ -61,16 +65,6 @@ pub fn process_file_data() -> Router<SqlitePool> {
 
                 let subtitle_query = subtitle_query_builder.build();
                 subtitle_query.execute(&db).await.unwrap();
-
-                let srt_db_data = sqlx::query_as::<_,database::CsvRowEntry>(r#"
-                    SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
-                    FROM csv_row WHERE csv_id = ? ;"#)
-                    .bind(csv_id)
-                    .fetch_all(&db)
-                    .await
-                    .unwrap();
-                    
-                println!("{:?}", srt_db_data);
             }
         }
 
@@ -79,5 +73,39 @@ pub fn process_file_data() -> Router<SqlitePool> {
     }
 
     Router::new()
-        .route("/api/fileData", post(handler))
+        .route("/", post(handler))
+}
+
+#[derive(Debug, Deserialize)]
+struct ProduceCsvFileParams {
+    csv_id: u32,
+}
+
+pub fn produce_csv_file() -> Router<SqlitePool> {
+    async fn handler(
+        State(db): State<SqlitePool>, 
+        Query(params): Query<ProduceCsvFileParams>,
+    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+        let csv_rows: Vec<database::CsvFileEntry> = sqlx::query_as::<_,database::CsvFileEntry>(r#"
+            SELECT row.csv_row_id, row.csv_id, row.tag, row.sq_marker, row.audio, row.picture, row.tl_subs, row.nl_subs, card.word, card.definition 
+            FROM csv_row as row
+            INNER JOIN flashcard_entries as card
+            ON row.csv_id = ? AND row.csv_row_id = card.csv_row_id ;
+        "#).bind(params.csv_id)
+            .fetch_all(&db)
+            .await
+            .unwrap();
+
+        let file = csv_parser::build_csv_file(csv_rows).unwrap();
+        println!("\n\n csv file: {}\n\n", file);
+
+        let headers = [
+            (header::CONTENT_TYPE, r#"text/csv; charset=utf-8"#),
+            (header::CONTENT_DISPOSITION, r#"attachment; filename="data.csv"#),
+        ];
+        Ok((headers, file))
+        
+    }
+    Router::new()
+        .route("/get-file", get(handler))
 }

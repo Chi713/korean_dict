@@ -68,9 +68,6 @@ async fn main() {
         Err(err) => {panic!("Error: {}", err);}
     }
 
-    // bring in html templates
-    // let tera = Tera::new("templates/**/*.html").unwrap();
-
     let app = Router::new()
         .merge(routes::csv_processing::process_file_data())
         .merge(routes::views::view())
@@ -78,6 +75,7 @@ async fn main() {
         .merge(routes::views::flashcard_entry_post())
         .merge(routes::views::flashcard_entry_patch())
         .merge(routes::views::flashcard_entry_delete())
+        .merge(routes::csv_processing::produce_csv_file())
         .with_state(db)
         .merge(routes::index::index())
         .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"));

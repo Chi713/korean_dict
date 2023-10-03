@@ -20,7 +20,7 @@
 	hx-push-url="false"
 	>Save</button>
 
-	<button>Clear</button>
+	<!-- <button>Clear</button> -->
 
     </form>
     <div id="sentence-input-response"></div>
@@ -43,7 +43,7 @@
 	hx-push-url="false"
 	>Save</button>
 
-	<button>Clear</button>
+	<!-- <button>Clear</button> -->
 
 	<button type="submit" hx-delete="view"
 	hx-boost="true" 
@@ -56,7 +56,7 @@
     {% endif %}
 
     <div id="dictionary_entries"
-	hx-get="sentence-viewer?csv_id={{csv_id}}&sentence={{sentence_order}}" 
+	hx-get="sentence-viewer?csv_row_id={{csv_row_id}}" 
 	hx-trigger="load"
 	hx-swap="outerHTML">
 	<p class="htmx-indicator">loading in from dictionary...</p>
@@ -65,7 +65,7 @@
     <div>
 	{% if sentence_order != 1 %}
 	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order-1}}" 
-	    hx-target="#content"
+	    hx-target="body"
 	    hx-swap="outerHTML"
 	    hx-push-url="true"
 	    >
@@ -73,13 +73,21 @@
 	</button>
 	{% endif %}
 	
-	{# make condition to not show this button on the last sentence #}
+	{% if csv_row_id != last_csv_row_id %}
 	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order+1}}"
-	    hx-target="#content"
+	    hx-target="body"
 	    hx-swap="outerHTML"
 	    hx-push-url="true"
 	    >
 	    next
 	</button>
+	{% else %}
+	<a href="get-file?csv_id={{csv_id}}"
+	   hx-boost="false"
+	   download
+	    >
+	    finish
+	</a>
+	{% endif %}
     </div>
 {% endblock content %}

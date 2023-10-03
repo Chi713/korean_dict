@@ -1,7 +1,8 @@
-use csv::ReaderBuilder;
+use csv::{ReaderBuilder, WriterBuilder};
 use std::collections::HashMap;
 use std::error::Error;
 use std::iter::zip;
+use crate::routes::database::{self, CsvFileEntry};
 
 #[derive(Debug)]
 pub struct CsvData {
@@ -22,7 +23,6 @@ pub fn csv_parse(stream_data: &str) -> Result<CsvData, Box<dyn Error + Send + Sy
         .map(String::from)
         .collect();
 
-    //let csv_data = stream_data.to_owned();
     let mut csv_res: Vec<HashMap<String, String>> = Vec::new();
     let rdr = ReaderBuilder::new()
         .has_headers(false)
@@ -33,11 +33,30 @@ pub fn csv_parse(stream_data: &str) -> Result<CsvData, Box<dyn Error + Send + Sy
         let result: Vec<String> = result?.iter().map(String::from).collect();
         let iter = zip(tags.to_owned(), result);
         let res: HashMap<String, String> = HashMap::from_iter(iter);
-        //println!("{res:#?}");
         csv_res.push(res);
     }
     Ok(CsvData::new(csv_res))
-    //Ok(csv_res)
+}
+
+pub fn build_csv_file(rows: Vec<database::CsvFileEntry>) -> Result<String, Box<dyn Error>> {
+    let mut wtr = WriterBuilder::new().from_writer(vec![]);
+
+    for entry in rows {
+        wtr.serialize(CsvFileEntry {
+            csv_row_id: entry.csv_row_id,
+            csv_id: entry.csv_id,
+            tag: entry.tag,
+            audio: entry.audio,
+            picture: entry.picture,
+            tl_subs: entry.tl_subs,
+            nl_subs: entry.nl_subs,
+            word: entry.word,
+            definition: entry.definition
+        })?;
+    }
+
+    let data = String::from_utf8(wtr.into_inner()?)?;
+    Ok(data)
 }
 
 #[cfg(test)]

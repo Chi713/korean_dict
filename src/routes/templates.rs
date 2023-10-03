@@ -15,6 +15,7 @@ pub struct ViewTemplate {
     pub sentence_order: u32,
     pub csv_row_id: u32,
     pub flashcard_entry: database::FlashcardEntriesEntry,
+    pub last_csv_row_id: u32,
 }
 
 #[derive(Template)]
