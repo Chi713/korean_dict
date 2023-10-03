@@ -1,9 +1,10 @@
 use crate::csv_parser;
 use super::database;
+use super::error::RouteError;
 use axum::{
     extract::{Multipart, State, Query},
     Router,
-    http::{StatusCode, header},
+    http::header,
     routing::{get, post},
     response::{Redirect, IntoResponse},
 };
@@ -16,7 +17,7 @@ pub fn process_file_data() -> Router<SqlitePool> {
     async fn handler(
         State(db): State<SqlitePool>, 
         mut multipart: Multipart
-    ) -> Result<Redirect, (StatusCode, String)> {
+    ) -> Result<Redirect, RouteError> {
         let mut csv_id = 0;
         while let Some(field) = multipart.next_field().await.unwrap() {
             println!("multipart interating");
@@ -39,8 +40,7 @@ pub fn process_file_data() -> Router<SqlitePool> {
                 csv_id = sqlx::query(r#"INSERT INTO csv (file_name) VALUES (?);"#)
                     .bind(file_name)
                     .execute(&db)
-                    .await
-                    .unwrap()
+                    .await?
                     .last_insert_rowid();
 
                 let mut subtitle_query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
@@ -64,7 +64,7 @@ pub fn process_file_data() -> Router<SqlitePool> {
                 });
 
                 let subtitle_query = subtitle_query_builder.build();
-                subtitle_query.execute(&db).await.unwrap();
+                subtitle_query.execute(&db).await?;
             }
         }
 
@@ -85,7 +85,7 @@ pub fn produce_csv_file() -> Router<SqlitePool> {
     async fn handler(
         State(db): State<SqlitePool>, 
         Query(params): Query<ProduceCsvFileParams>,
-    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    ) -> Result<impl IntoResponse, RouteError> {
         let csv_rows: Vec<database::CsvFileEntry> = sqlx::query_as::<_,database::CsvFileEntry>(r#"
             SELECT row.csv_row_id, row.csv_id, row.tag, row.sq_marker, row.audio, row.picture, row.tl_subs, row.nl_subs, card.word, card.definition 
             FROM csv_row as row
@@ -93,8 +93,7 @@ pub fn produce_csv_file() -> Router<SqlitePool> {
             ON row.csv_id = ? AND row.csv_row_id = card.csv_row_id ;
         "#).bind(params.csv_id)
             .fetch_all(&db)
-            .await
-            .unwrap();
+            .await?;
 
         let file = csv_parser::build_csv_file(csv_rows).unwrap();
         println!("\n\n csv file: {}\n\n", file);

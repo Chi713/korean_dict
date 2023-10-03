@@ -3,16 +3,15 @@ use crate::parser::{LanguageParser, KhaiiiParser};
 use crate::search::Session;
 use super::database;
 use super::templates::{ViewTemplate, SentenceViewerTemplate};
+use super::error::RouteError;
 use axum::{
     extract::{Query, State, Form},
     Router,
-    http::StatusCode,
     routing::{get, post, patch, delete},
     response::IntoResponse,
 };
 use serde::Deserialize;
 use sqlx::{Sqlite, SqlitePool, QueryBuilder};
-use std::error::Error;
 
 const BIND_LIMIT: usize = 65535;
 
@@ -26,7 +25,7 @@ pub fn view() -> Router<SqlitePool> {
     async fn handler(
         State(db): State<SqlitePool>,
         Query(params): Query<ViewParams> 
-    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    ) -> Result<impl IntoResponse, RouteError> {
         let csv_id = params.csv_id;
         let sentence_order = params.sentence.unwrap_or(1);
         println!("{:?}", csv_id);
@@ -37,16 +36,14 @@ pub fn view() -> Router<SqlitePool> {
             .bind(csv_id)
             .bind(sentence_order)
             .fetch_one(&db)
-            .await
-            .unwrap();
+            .await?;
 
         let flashcard_entry = sqlx::query_as::<_,database::FlashcardEntriesEntry>(r#"
                 SELECT flashcard_entries_id, csv_row_id, word, definition
                 FROM flashcard_entries WHERE csv_row_id = ?;"#)
             .bind(&sentence.csv_row_id)
             .fetch_optional(&db)
-            .await
-            .unwrap();
+            .await?;
 
         let flashcard = flashcard_entry.unwrap_or_default();
 
@@ -76,11 +73,11 @@ pub fn sentence_viewer() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
         Query(params): Query<SentenceViewerParams> 
-    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    ) -> Result<impl IntoResponse, RouteError> {
 
         println!("\n\ncsv_row_id from query params: {}\n\n",params.csv_row_id);
 
-        let sentence = get_sentence(params.csv_row_id, &db).await.unwrap();
+        let sentence = get_sentence(params.csv_row_id, &db).await?;
 
         let tl_sentence = sentence.tl_subs;
         let csv_row_id = sentence.csv_row_id;
@@ -116,12 +113,11 @@ pub fn sentence_viewer() -> Router<SqlitePool>{
             "#)
             .bind(csv_row_id)
             .fetch_all(&db)
-            .await
-            .unwrap();
+            .await?;
 
         println!("dup words: {:?}", ignored_words);
 
-        sqlx::query(r#"DELETE FROM sentence_words"#).execute(&db).await.unwrap();
+        sqlx::query(r#"DELETE FROM sentence_words"#).execute(&db).await?;
 
         // find better way to remove words
         // refactor to make dup deleting from the table an sql query
@@ -160,7 +156,7 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
         Form(data): Form<FlashCardResponse>
-    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    ) -> Result<impl IntoResponse, RouteError> {
 
         println!("{:?}", &data);
         let flashcard_entry = sqlx::query_as::<_,database::FlashcardEntriesEntry>(r#"
@@ -173,12 +169,11 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
             .bind(&data.word)
             .bind(&data.definition)
             .fetch_one(&db)
-            .await
-            .unwrap();
+            .await?;
 
-        let sentence = get_sentence(data.csv_row_id, &db).await.unwrap();
+        let sentence = get_sentence(data.csv_row_id, &db).await?;
 
-        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await.unwrap();
+        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await?;
 
         Ok(ViewTemplate {
             csv_id: sentence.csv_id,
@@ -199,7 +194,7 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
         Form(data): Form<FlashCardResponse>
-    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    ) -> Result<impl IntoResponse, RouteError> {
 
         println!("{:?}", &data);
         let flashcard_entry = sqlx::query_as::<_,database::FlashcardEntriesEntry>(r#"
@@ -211,12 +206,11 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
             .bind(&data.definition)
             .bind(&data.csv_row_id)
             .fetch_one(&db)
-            .await
-            .unwrap();
+            .await?;
 
-        let sentence = get_sentence(data.csv_row_id, &db).await.unwrap();
+        let sentence = get_sentence(data.csv_row_id, &db).await?;
 
-        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await.unwrap();
+        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await?;
 
         Ok(ViewTemplate {
             csv_id: sentence.csv_id,
@@ -236,25 +230,21 @@ pub fn flashcard_entry_delete() -> Router<SqlitePool>{
     async fn handler(
         State(db): State<SqlitePool>,
         Form(data): Form<FlashCardResponse>
-    ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    ) -> Result<impl IntoResponse, RouteError> {
 
         println!("{:?}", &data);
-        let delete_query = sqlx::query(r#"
+        sqlx::query(r#"
             DELETE FROM flashcard_entries 
             WHERE csv_row_id = ? ;"# 
         ).bind(&data.csv_row_id)
             .execute(&db)
-            .await;
-        match delete_query {
-            Ok(_) => (),
-            Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
-        }
+            .await?;
 
-        let sentence = get_sentence(data.csv_row_id, &db).await.unwrap();
+        let sentence = get_sentence(data.csv_row_id, &db).await?;
 
         let flashcard_entry = database::FlashcardEntriesEntry::default();
 
-        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await.unwrap();
+        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await?;
 
         Ok(ViewTemplate {
             csv_id: sentence.csv_id,
@@ -270,7 +260,7 @@ pub fn flashcard_entry_delete() -> Router<SqlitePool>{
         .route("/view", delete(handler))
 }
 
-async fn get_sentence(csv_row_id: u32, db: &SqlitePool) -> Result<database::CsvRowEntry, Box<dyn Error>> {
+async fn get_sentence(csv_row_id: u32, db: &SqlitePool) -> Result<database::CsvRowEntry, RouteError> {
 
         Ok(sqlx::query_as::<_,database::CsvRowEntry>(r#"
                 SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
@@ -280,7 +270,7 @@ async fn get_sentence(csv_row_id: u32, db: &SqlitePool) -> Result<database::CsvR
             .await?)
 }
 
-async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, Box<dyn Error>> {
+async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, RouteError> {
     // let csv_last_row = sqlx::query_as::<_,database::CsvLastRowId>(r#"
     //     SELECT LAST_VALUE (csv_row_id) OVER (
     //         ORDER BY csv_row_id 
@@ -306,3 +296,4 @@ async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, Box<dy
 
     Ok(csv_last_row_id)
 }
+
