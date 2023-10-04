@@ -1,0 +1,58 @@
+{% if flashcard_entry.word == "" %}
+    <form id="flashcard_entry" autocomplete="off" >
+	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
+	<label for="word">Word</label>
+	<input type="text" name="word" id="word" value="" required/>
+
+	<label for="definition">Definition</label>
+	<input type="text" name="definition" id="definition" value="" required/>
+
+	<button type="submit" hx-post="view"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="#flashcard_entry"
+	hx-push-url="false"
+	>Save</button>
+
+	<!-- <button>Clear</button> -->
+
+    </form>
+
+{% else %}
+
+    <form id="flashcard_entry" autocomplete="off"
+	>
+	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
+	<label for="word">Word</label>
+	<input type="text" name="word" id="word" value="{{flashcard_entry.word}}" required/>
+
+	<label for="definition">Definition</label>
+	<input type="text" name="definition" id="definition" value="{{flashcard_entry.definition}}" required/>
+
+	<button type="submit" hx-patch="view"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="#flashcard_entry"
+	hx-push-url="false"
+	>Save</button>
+
+	<!-- <button>Clear</button> -->
+
+	<button type="submit" hx-delete="view"
+	hx-boost="true" 
+	hx-swap="OuterHTML"
+	hx-target="#flashcard_entry"
+	hx-push-url="false"
+	>delete</button>
+    </form>
+{% endif %}
+
+{% if was_saved == FormSaved::Saved %}
+<div id="sentence-input-response">Saved</div>
+{% endif %}
+{% if was_saved == FormSaved::Updated %}
+<div id="sentence-input-response">Updated</div>
+{% endif %}
+{% if was_saved == FormSaved::Deleted %}
+<div id="sentence-input-response">Deleted</div>
+{% endif %}

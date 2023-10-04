@@ -12,7 +12,7 @@ pub enum RouteError {
     RowNotFound(#[from] sqlx::Error),
 
     #[error("Unknown Internal Error")]
-    Internal
+    Unknown
 }
 
 impl IntoResponse for RouteError {
@@ -21,7 +21,7 @@ impl IntoResponse for RouteError {
             RouteError::RowNotFound(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "the was an error retrieving data from database")
             }
-            RouteError::Internal => {
+            RouteError::Unknown => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Unknown Internal Error")
             }
         };

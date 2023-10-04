@@ -3,64 +3,20 @@
     <h2>{{tl_sentence}}</h2>
     <h3>{{nl_sentence}}</h3>
 
-    {% if flashcard_entry.word == "" %}
+    {% include "flashcard_entry_form.html" %}
 
-    <form id="flashcard_entry" autocomplete="off" >
-	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
-	<label for="word">Word</label>
-	<input type="text" name="word" id="word" value="" required/>
-
-	<label for="definition">Definition</label>
-	<input type="text" name="definition" id="definition" value="" required/>
-
-	<button type="submit" hx-post="view"
-	hx-boost="true" 
-	hx-swap="OuterHTML"
-	hx-target="body"
-	hx-push-url="false"
-	>Save</button>
-
-	<!-- <button>Clear</button> -->
-
-    </form>
-    <div id="sentence-input-response"></div>
-
-    {% else %}
-
-    <form id="flashcard_entry" autocomplete="off"
-	>
-	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
-	<label for="word">Word</label>
-	<input type="text" name="word" id="word" value="{{flashcard_entry.word}}" required/>
-
-	<label for="definition">Definition</label>
-	<input type="text" name="definition" id="definition" value="{{flashcard_entry.definition}}" required/>
-
-	<button type="submit" hx-patch="view"
-	hx-boost="true" 
-	hx-swap="OuterHTML"
-	hx-target="body"
-	hx-push-url="false"
-	>Save</button>
-
-	<!-- <button>Clear</button> -->
-
-	<button type="submit" hx-delete="view"
-	hx-boost="true" 
-	hx-swap="OuterHTML"
-	hx-target="body"
-	hx-push-url="false"
-	>delete</button>
-    </form>
-    <div id="sentence-input-response"></div>
-    {% endif %}
-
-    <div id="dictionary_entries"
-	hx-get="sentence-viewer?csv_row_id={{csv_row_id}}" 
-	hx-trigger="load"
-	hx-swap="outerHTML">
-	<p class="htmx-indicator">loading in from dictionary...</p>
-    </div>
+    <ul>
+	{% for word in words_list %} 
+	<li>
+	    <strong>{{word}}</strong>
+	    <ol hx-get="sentence-viewer?word={{word}}"
+		hx-trigger="load">
+		<img src="loading.svg" class="htmx-indicator" style="fill: black">
+		<!-- <p class="htmx-indicator">loading in from dictionary...</p> -->
+	    </ol>
+	</li>
+	{% endfor %}
+    </ul>
 
     <div>
 	{% if sentence_order != 1 %}

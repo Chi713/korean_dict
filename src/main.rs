@@ -78,7 +78,8 @@ async fn main() {
         .merge(routes::csv_processing::produce_csv_file())
         .with_state(db)
         .merge(routes::index::index())
-        .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"));
+        .nest_service("/favicon.ico", ServeDir::new("public/favicon.ico"))
+        .nest_service("/loading.svg", ServeDir::new("public/three-dots.svg"));
 
     info!("listening on http://{}", sock_addr);
 

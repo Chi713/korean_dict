@@ -1,15 +1,6 @@
-<ul>
-    {% for word_entry in words_list %} 
-    <li>
-	<strong>{{word_entry.word}}</strong>
-	<ol>
-	{% for definition in word_entry.definition %}
-	<li>
-		<div>{{ definition.0 }}</div>
-		<div>{{ definition.1 }}</div>
-	</li>
-	{% endfor %}
-	</ol>
-    </li>
-    {% endfor %}
-</ul>
+{% for definition in word_entry.definition %}
+<li>
+    <div>{{ definition.0 }}</div>
+    <div>{{ definition.1 }}</div>
+</li>
+{% endfor %}

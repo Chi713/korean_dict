@@ -1,8 +1,9 @@
 use crate::parser::Parser as KrParser;
 use crate::parser::{LanguageParser, KhaiiiParser};
+use crate::routes::templates::FileFormTemplate;
 use crate::search::Session;
 use super::database;
-use super::templates::{ViewTemplate, SentenceViewerTemplate};
+use super::templates::{ViewTemplate, SentenceViewerTemplate, FormSaved};
 use super::error::RouteError;
 use axum::{
     extract::{Query, State, Form},
@@ -44,52 +45,14 @@ pub fn view() -> Router<SqlitePool> {
             .bind(&sentence.csv_row_id)
             .fetch_optional(&db)
             .await?;
-
-        let flashcard = flashcard_entry.unwrap_or_default();
-
-        let last_csv_row_id = get_last_csv_row_id(csv_id, &db).await.unwrap();
-
-        Ok(ViewTemplate {
-            csv_id,
-            csv_row_id: sentence.csv_row_id,
-            tl_sentence: sentence.tl_subs,
-            nl_sentence: sentence.nl_subs,
-            sentence_order: sentence.row_order,
-            flashcard_entry: flashcard,
-            last_csv_row_id,
-        })
-    }
-
-    Router::new()
-        .route("/view", get(handler))
-}
-
-#[derive(Debug, Deserialize)]
-struct SentenceViewerParams {
-    csv_row_id: u32,
-}
-
-pub fn sentence_viewer() -> Router<SqlitePool>{
-    async fn handler(
-        State(db): State<SqlitePool>,
-        Query(params): Query<SentenceViewerParams> 
-    ) -> Result<impl IntoResponse, RouteError> {
-
-        println!("\n\ncsv_row_id from query params: {}\n\n",params.csv_row_id);
-
-        let sentence = get_sentence(params.csv_row_id, &db).await?;
-
-        let tl_sentence = sentence.tl_subs;
-        let csv_row_id = sentence.csv_row_id;
-
-        // parse sentence
-        let client = Session::new().unwrap();
+        
+        //parse sentence
         let parser = KrParser::new(KhaiiiParser::new());
-        println!("sentence: {tl_sentence}");
-        let mut parsed_sentence = parser.parser.parse(&tl_sentence).unwrap();
+        println!("sentence: {}", sentence.tl_subs);
+        let mut parsed_sentence = parser.parser.parse(&sentence.tl_subs).unwrap();
         println!("parsed sentence: {:?}", parsed_sentence);
         
-        // filter out words to be ignored
+        // clear sentence_words after every request
         // must fix to not insert every request
         let mut sentence_word_query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             "INSERT INTO sentence_words (
@@ -98,20 +61,20 @@ pub fn sentence_viewer() -> Router<SqlitePool>{
         ); 
 
         sentence_word_query_builder.push_values(parsed_sentence.iter().take(BIND_LIMIT/2), |mut b, word| {
-            b.push_bind(csv_row_id)
+            b.push_bind(&sentence.csv_row_id)
                 .push_bind(word);
         });
 
         let sentence_word_query = sentence_word_query_builder.build();
         sentence_word_query.execute(&db).await.unwrap();
-
+        
         let ignored_words = sqlx::query_as::<_,database::WordEntry>(r#"
                 SELECT words.word_id, sentence_words.csv_row_id, words.word, words.is_ignored
                 FROM words
                 LEFT JOIN sentence_words
                 ON words.word = sentence_words.temp_word AND words.is_ignored = 1;
             "#)
-            .bind(csv_row_id)
+            .bind(&sentence.csv_row_id)
             .fetch_all(&db)
             .await?;
 
@@ -131,12 +94,47 @@ pub fn sentence_viewer() -> Router<SqlitePool>{
             flag
         });
 
-        // get dictionary entry from parsed sentence words
-        let searched_words_list = client.get_list(parsed_sentence).await.unwrap();
-        println!("Searched words list: {:#?}", searched_words_list);
+        let flashcard = flashcard_entry.unwrap_or_default();
+
+        let last_csv_row_id = get_last_csv_row_id(csv_id, &db).await.unwrap();
+
+        Ok(ViewTemplate {
+            csv_id,
+            csv_row_id: sentence.csv_row_id,
+            tl_sentence: sentence.tl_subs,
+            nl_sentence: sentence.nl_subs,
+            sentence_order: sentence.row_order,
+            flashcard_entry: flashcard,
+            last_csv_row_id,
+            words_list: parsed_sentence,
+            was_saved: FormSaved::Nothing,
+        })
+    }
+
+    Router::new()
+        .route("/view", get(handler))
+}
+
+#[derive(Debug, Deserialize)]
+struct SentenceViewerParams {
+    word: String,
+}
+
+pub fn sentence_viewer() -> Router<SqlitePool>{
+    async fn handler(
+        State(db): State<SqlitePool>,
+        Query(params): Query<SentenceViewerParams> 
+    ) -> Result<impl IntoResponse, RouteError> {
+
+        println!("\n\ncsv_row_id from query params: {}\n\n",params.word);
+
+        // fix to not instatiate a new session for every request
+        let client = Session::new().unwrap();
+        let searched_word = client.get(params.word).await.unwrap();
+        println!("Searched words list: {:#?}", searched_word);
 
         Ok(SentenceViewerTemplate {
-            words_list: searched_words_list
+            word_entry: searched_word
         })
     }
 
@@ -173,16 +171,11 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
 
         let sentence = get_sentence(data.csv_row_id, &db).await?;
 
-        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await?;
-
-        Ok(ViewTemplate {
+        Ok(FileFormTemplate {
             csv_id: sentence.csv_id,
             csv_row_id: sentence.csv_row_id,
-            tl_sentence: sentence.tl_subs,
-            nl_sentence: sentence.nl_subs,
-            sentence_order: sentence.row_order,
             flashcard_entry,
-            last_csv_row_id,
+            was_saved: FormSaved::Saved,
         })
 
     }
@@ -210,16 +203,11 @@ pub fn flashcard_entry_patch() -> Router<SqlitePool>{
 
         let sentence = get_sentence(data.csv_row_id, &db).await?;
 
-        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await?;
-
-        Ok(ViewTemplate {
+        Ok(FileFormTemplate {
             csv_id: sentence.csv_id,
             csv_row_id: sentence.csv_row_id,
-            tl_sentence: sentence.tl_subs,
-            nl_sentence: sentence.nl_subs,
-            sentence_order: sentence.row_order,
             flashcard_entry,
-            last_csv_row_id,
+            was_saved: FormSaved::Updated,
         })
     }
     Router::new()
@@ -244,16 +232,11 @@ pub fn flashcard_entry_delete() -> Router<SqlitePool>{
 
         let flashcard_entry = database::FlashcardEntriesEntry::default();
 
-        let last_csv_row_id = get_last_csv_row_id(sentence.csv_id, &db).await?;
-
-        Ok(ViewTemplate {
+        Ok(FileFormTemplate {
             csv_id: sentence.csv_id,
             csv_row_id: sentence.csv_row_id,
-            tl_sentence: sentence.tl_subs,
-            nl_sentence: sentence.nl_subs,
-            sentence_order: sentence.row_order,
             flashcard_entry,
-            last_csv_row_id,
+            was_saved: FormSaved::Deleted,
         })
     }
     Router::new()

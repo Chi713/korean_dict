@@ -2,6 +2,14 @@ use crate::search::Entry;
 use super::database;
 use askama::Template;
 
+#[derive(PartialEq)]
+pub enum FormSaved {
+    Saved,
+    Updated,
+    Deleted,
+    Nothing
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate{}
@@ -16,10 +24,21 @@ pub struct ViewTemplate {
     pub csv_row_id: u32,
     pub flashcard_entry: database::FlashcardEntriesEntry,
     pub last_csv_row_id: u32,
+    pub words_list: Vec<String>,
+    pub was_saved: FormSaved,
 }
 
 #[derive(Template)]
 #[template(path = "sentence_viewer.html")]
 pub struct SentenceViewerTemplate {
-   pub words_list: Vec<Entry> 
+   pub word_entry: Entry 
+}
+
+#[derive(Template)]
+#[template(path = "flashcard_entry_form.html")]
+pub struct FileFormTemplate { 
+    pub csv_id: u32,
+    pub csv_row_id: u32,
+    pub flashcard_entry: database::FlashcardEntriesEntry,
+    pub was_saved: FormSaved,
 }
