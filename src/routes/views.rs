@@ -1,6 +1,6 @@
 use crate::parser::Parser as KrParser;
 use crate::parser::{LanguageParser, KhaiiiParser};
-use crate::routes::templates::FileFormTemplate;
+use crate::routes::templates::{FileFormTemplate, FlaggedWord};
 use crate::search::Session;
 use super::database;
 use super::templates::{ViewTemplate, SentenceViewerTemplate, FormSaved};
@@ -12,9 +12,7 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Deserialize;
-use sqlx::{Sqlite, SqlitePool, QueryBuilder};
-
-const BIND_LIMIT: usize = 65535;
+use sqlx::SqlitePool;
 
 #[derive(Debug, Deserialize)]
 struct ViewParams {
@@ -49,54 +47,37 @@ pub fn view() -> Router<SqlitePool> {
         //parse sentence
         let parser = KrParser::new(KhaiiiParser::new());
         println!("sentence: {}", sentence.tl_subs);
-        let mut parsed_sentence = parser.parser.parse(&sentence.tl_subs).unwrap();
+        let parsed_sentence = parser.parser
+            .parse(&sentence.tl_subs)
+            .unwrap();
         println!("parsed sentence: {:?}", parsed_sentence);
         
-        // clear sentence_words after every request
-        // must fix to not insert every request
-        let mut sentence_word_query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            "INSERT INTO sentence_words (
-                csv_row_id, temp_word
-            ) " 
-        ); 
-
-        sentence_word_query_builder.push_values(parsed_sentence.iter().take(BIND_LIMIT/2), |mut b, word| {
-            b.push_bind(&sentence.csv_row_id)
-                .push_bind(word);
-        });
-
-        let sentence_word_query = sentence_word_query_builder.build();
-        sentence_word_query.execute(&db).await.unwrap();
-        
-        let ignored_words = sqlx::query_as::<_,database::WordEntry>(r#"
-                SELECT words.word_id, sentence_words.csv_row_id, words.word, words.is_ignored
+        let mut filtered_sentence: Vec<FlaggedWord> = vec![];
+        for word in parsed_sentence {
+            let repeated_words = sqlx::query_as::<_,database::WordEntry>(r#"
+                SELECT word_id, csv_row_id, word, is_ignored
                 FROM words
-                LEFT JOIN sentence_words
-                ON words.word = sentence_words.temp_word AND words.is_ignored = 1;
+                WHERE word = ? ;
             "#)
-            .bind(&sentence.csv_row_id)
-            .fetch_all(&db)
+            .bind(&word)
+            .fetch_optional(&db)
             .await?;
-
-        println!("dup words: {:?}", ignored_words);
-
-        sqlx::query(r#"DELETE FROM sentence_words"#).execute(&db).await?;
-
-        // find better way to remove words
-        // refactor to make dup deleting from the table an sql query
-        parsed_sentence.retain(|word| {
-            let mut flag = true;
-            for ignored_word in ignored_words.iter() {
-                if word == &ignored_word.word && ignored_word.is_ignored {
-                    flag = false
+            
+            let mut flagged_word = FlaggedWord::default();
+            flagged_word.word = word;
+            if let Some(word) = repeated_words {
+                if !word.is_ignored {
+                    flagged_word.duplicate = true;
+                    filtered_sentence.push(flagged_word);
                 }
+            } else {
+                filtered_sentence.push(flagged_word);
             }
-            flag
-        });
+        }
 
         let flashcard = flashcard_entry.unwrap_or_default();
 
-        let last_csv_row_id = get_last_csv_row_id(csv_id, &db).await.unwrap();
+        let last_csv_row_id = get_last_csv_row_id(csv_id, &db).await?;
 
         Ok(ViewTemplate {
             csv_id,
@@ -106,7 +87,7 @@ pub fn view() -> Router<SqlitePool> {
             sentence_order: sentence.row_order,
             flashcard_entry: flashcard,
             last_csv_row_id,
-            words_list: parsed_sentence,
+            words_list: filtered_sentence,
             was_saved: FormSaved::Nothing,
         })
     }
@@ -254,19 +235,6 @@ async fn get_sentence(csv_row_id: u32, db: &SqlitePool) -> Result<database::CsvR
 }
 
 async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, RouteError> {
-    // let csv_last_row = sqlx::query_as::<_,database::CsvLastRowId>(r#"
-    //     SELECT LAST_VALUE (csv_row_id) OVER (
-    //         ORDER BY csv_row_id 
-    //         RANGE BETWEEN UNBOUNDED PRECEDING AND 
-    //         UNBOUNDED FOLLOWING
-    //     )
-    //     FROM csv_row 
-    //     WHERE csv_id= ? ;"#)
-    // .bind(csv_id)
-    // .fetch_one(db)
-    // .await
-    // .unwrap();
-
     let csv_rows = sqlx::query_as::<_,database::CsvLastRowId>(r#"
         SELECT csv_row_id
         FROM csv_row 
@@ -275,7 +243,10 @@ async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, RouteE
     .fetch_all(db)
     .await?;
 
-    let csv_last_row_id = csv_rows.into_iter().map(|f| f.csv_row_id).max().unwrap();
+    let csv_last_row_id = csv_rows.into_iter()
+        .map(|f| f.csv_row_id)
+        .max()
+        .unwrap();
 
     Ok(csv_last_row_id)
 }

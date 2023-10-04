@@ -8,8 +8,12 @@
     <ul>
 	{% for word in words_list %} 
 	<li>
-	    <strong>{{word}}</strong>
-	    <ol hx-get="sentence-viewer?word={{word}}"
+	    <strong
+	    {%if word.duplicate %}
+		    style="background-color: rgba(255, 165, 0, 0.5)"
+	    {% endif %}
+		>{{word.word}}</strong>
+	    <ol hx-get="sentence-viewer?word={{word.word}}"
 		hx-trigger="load">
 		<img src="loading.svg" class="htmx-indicator" style="fill: black">
 		<!-- <p class="htmx-indicator">loading in from dictionary...</p> -->

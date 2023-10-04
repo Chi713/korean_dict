@@ -10,6 +10,12 @@ pub enum FormSaved {
     Nothing
 }
 
+#[derive(Debug, Default)]
+pub struct FlaggedWord {
+    pub word: String,
+    pub duplicate: bool,
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate{}
@@ -24,7 +30,7 @@ pub struct ViewTemplate {
     pub csv_row_id: u32,
     pub flashcard_entry: database::FlashcardEntriesEntry,
     pub last_csv_row_id: u32,
-    pub words_list: Vec<String>,
+    pub words_list: Vec<FlaggedWord>,
     pub was_saved: FormSaved,
 }
 
