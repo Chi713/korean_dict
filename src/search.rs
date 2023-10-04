@@ -1,17 +1,13 @@
-use futures::{stream, StreamExt};
 use reqwest;
 use reqwest::Client;
 use roxmltree::{Document, Node};
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::error::Error;
 use std::fs::File;
 use anyhow::Context;
 use std::io::prelude::*;
 use std::iter::zip;
 
-
-const CONCURRENT_REQUESTS: usize = 20;
 const CERT_PATH: &str = "resources/certs/krdict.pem";
 
 #[derive(Debug, Clone, PartialEq,Deserialize, Serialize)]
@@ -36,7 +32,7 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new() -> Result<Session, Box<dyn Error>> {
+    pub fn new() -> Result<Session, anyhow::Error> {
 
         println!("opening the cert file");
         let mut f = File::open(CERT_PATH).context("failed to open certificate from path")?;
@@ -57,16 +53,14 @@ impl Session {
         })
     }
 
-    pub async fn get(&self, query: String) -> Result<Entry, Box<dyn Error + Send + Sync>> {
+    pub async fn get(&self, query: String) -> Result<Entry, anyhow::Error> {
         let url = format!(
             "https://krdict.korean.go.kr/api/search?key={}&q={}&translated=y&trans_lang={}",
             self.krdict_api_key, query, '1'
         );
 
-        //println!("{:?}", url);
         let response = self.client.get(&url).send().await.context("dict request failed")?;
-        let data = response.text().await?;
-        //println!("{:?}", data);
+        let data = response.text().await.context("getting body failed")?;
 
         //parses the data and builds Entry
         let doc: Document = roxmltree::Document::parse(&data).context("failed to parse xml")?;
@@ -97,18 +91,18 @@ impl Session {
         let res = Entry::new(query.to_owned(), def);
         Ok(res)
     }
-
-    pub async fn get_list(&self, words: Vec<String>) -> Result<Vec<Entry>, Box<dyn Error + Send + Sync>> {
-        stream::iter(words.into_iter().map(|word| self.get(word)))
-            .buffered(CONCURRENT_REQUESTS)
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .collect()
-        //bodies
-
-        //TODO add caching
-    }
+    //
+    // pub async fn get_list(&self, words: Vec<String>) -> Result<Vec<Entry>, Box<dyn Error + Send + Sync>> {
+    //     stream::iter(words.into_iter().map(|word| self.get(word)))
+    //         .buffered(CONCURRENT_REQUESTS)
+    //         .collect::<Vec<_>>()
+    //         .await
+    //         .into_iter()
+    //         .collect()
+    //     //bodies
+    //
+    //     //TODO add caching
+    // }
 
     fn has_child_tag(node: &Node, tag: &str, query: &str) -> bool {
         let mut flag = false;

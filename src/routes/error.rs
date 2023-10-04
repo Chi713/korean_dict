@@ -1,3 +1,4 @@
+use log::error;
 use thiserror::Error;
 use axum::{
     Json,
@@ -8,21 +9,30 @@ use serde_json::json;
 
 #[derive(Error, Debug)]
 pub enum RouteError {
-    #[error("sqlx error")]
-    RowNotFound(#[from] sqlx::Error),
-
-    #[error("Unknown Internal Error")]
-    Unknown
+    #[error("transparent")]
+    SqlxError(#[from] sqlx::Error),
+    #[error("failed to get last csv row error")]
+    LastCsvRowError,
+    #[error("transparent")]
+    Unknown(#[from] anyhow::Error),
 }
 
 impl IntoResponse for RouteError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            RouteError::RowNotFound(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "the was an error retrieving data from database")
+            RouteError::SqlxError(source) => {
+                error!("{}", source);
+                // please change error code if ever in prod ㅠㅠ
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("the was an error retrieving data from database"))
             }
-            RouteError::Unknown => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Unknown Internal Error")
+            RouteError::LastCsvRowError => {
+                error!("failed to get last csv row error");
+                // please change error code if ever in prod ㅠㅠ
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("failed to get last csv row error"))
+            }
+            RouteError::Unknown(source) => {
+                error!("{}", source);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Unknown Internal Error".into())
             }
         };
 

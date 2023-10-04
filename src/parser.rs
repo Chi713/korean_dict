@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::collections::HashSet;
 use std::process::Command;
 use std::sync::Arc;
@@ -10,7 +9,7 @@ const EXCEPTIONS: &[&str] = &[
 ];
 
 pub trait LanguageParser {
-    fn parse(&self, sentence: &str) -> Result<Vec<String>, Box<dyn Error>>;
+    fn parse(&self, sentence: &str) -> Result<Vec<String>, anyhow::Error>;
 }
 
 pub struct Parser<T> {
@@ -31,16 +30,16 @@ pub struct KomoranParser {
 
 impl LanguageParser for KomoranParser {
     // can only be used strictly synchronously
-    fn parse(&self, sentence: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    fn parse(&self, sentence: &str) -> Result<Vec<String>, anyhow::Error> {
         let result_output = Command::new("python3")
             .arg("py/komoran_parser.py")
             .arg(sentence)
             .output()
             .expect("Command failed, sentence not parsed");
-        let result_json = String::from_utf8(result_output.stdout).unwrap();
+        let result_json = String::from_utf8(result_output.stdout)?;
         let result_json = result_json.trim();
         println!("result_json: {:?}",result_json);
-        let result: Vec<(String, String)> = serde_json::from_str(result_json).unwrap();
+        let result: Vec<(String, String)> = serde_json::from_str(result_json)?;
 
         let mut ex_tags: Vec<&str> = vec!["XPN", "NP", "VX"];
         ex_tags.extend(EXCEPTIONS.iter().copied());
@@ -51,20 +50,20 @@ impl LanguageParser for KomoranParser {
             .filter(|x| !ex_tags.contains(&x.1.as_str()))
             .collect();
 
-        let words_list: Vec<String> = remove_dup(komoran_word_processor(filtered_result));
+        let words_list: Vec<String> = remove_dup(komoran_word_processor(filtered_result)?);
 
         Ok(words_list)
     }
 }
 
-fn komoran_word_processor(data: Vec<(String, String)>) -> Vec<String> {
+fn komoran_word_processor(data: Vec<(String, String)>) -> Result<Vec<String>, anyhow::Error> {
     let verb_tags = vec!["VV", "XSV", "XSA", "VA", "V"];
     let stem_tags = vec!["XSV", "XSA"];
 
     let mut output_data: Vec<String> = Vec::new();
     for (mut word, tag) in data {
         if stem_tags.contains(&tag.as_ref()) {
-            let mut temp_word: String = output_data.pop().unwrap();
+            let mut temp_word: String = output_data.pop().unwrap_or("".into());
             temp_word.push_str(&word);
             word = temp_word;
         }
@@ -75,7 +74,7 @@ fn komoran_word_processor(data: Vec<(String, String)>) -> Vec<String> {
 
         output_data.push(word.to_owned());
         }
-    output_data
+    Ok(output_data)
 }
 
 pub struct KhaiiiParser {
@@ -88,7 +87,7 @@ impl KhaiiiParser {
 }
 
 impl LanguageParser for KhaiiiParser {
-    fn parse(&self, sentence: &str) -> Result<Vec<String>,Box<dyn Error>> {
+    fn parse(&self, sentence: &str) -> Result<Vec<String>, anyhow::Error> {
         let result_output = Command::new("python3")
             .arg("py/khaiii_parser.py")
             .arg(sentence)
@@ -98,7 +97,7 @@ impl LanguageParser for KhaiiiParser {
         let result_json = String::from_utf8(result_output.stdout).unwrap();
         let result_json = result_json.trim();
         println!("result_json: {:?}",result_json);
-        let result: Vec<Vec<(String, String)>> = serde_json::from_str(result_json).unwrap();
+        let result: Vec<Vec<(String, String)>> = serde_json::from_str(result_json)?;
 
         println!("res tag: {:?}", result);
 
@@ -128,7 +127,7 @@ fn khaiii_word_processor(data: Vec<(String, String)>) -> Vec<String> {
     
     for (mut word, tag) in data {
         if stem_tags.contains(&tag.as_ref()) {
-            let mut temp_word: String = output_data.pop().unwrap();
+            let mut temp_word: String = output_data.pop().unwrap_or("".into());
             temp_word.push_str(&word);
             word = temp_word;
         }

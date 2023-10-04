@@ -5,14 +5,14 @@ use crate::search::Session;
 use super::database;
 use super::templates::{ViewTemplate, SentenceViewerTemplate, FormSaved};
 use super::error::RouteError;
+use serde::Deserialize;
+use sqlx::SqlitePool;
 use axum::{
     extract::{Query, State, Form},
     Router,
     routing::{get, post, patch, delete},
     response::IntoResponse,
 };
-use serde::Deserialize;
-use sqlx::SqlitePool;
 
 #[derive(Debug, Deserialize)]
 struct ViewParams {
@@ -44,14 +44,13 @@ pub fn view() -> Router<SqlitePool> {
             .fetch_optional(&db)
             .await?;
         
-        //parse sentence
+        // parse sentence
         let parser = KrParser::new(KhaiiiParser::new());
         println!("sentence: {}", sentence.tl_subs);
-        let parsed_sentence = parser.parser
-            .parse(&sentence.tl_subs)
-            .unwrap();
+        let parsed_sentence = parser.parser.parse(&sentence.tl_subs)?;
         println!("parsed sentence: {:?}", parsed_sentence);
         
+        // filter parsed sentence
         let mut filtered_sentence: Vec<FlaggedWord> = vec![];
         for word in parsed_sentence {
             let repeated_words = sqlx::query_as::<_,database::WordEntry>(r#"
@@ -110,8 +109,8 @@ pub fn sentence_viewer() -> Router<SqlitePool>{
         println!("\n\ncsv_row_id from query params: {}\n\n",params.word);
 
         // fix to not instatiate a new session for every request
-        let client = Session::new().unwrap();
-        let searched_word = client.get(params.word).await.unwrap();
+        let client = Session::new()?;
+        let searched_word = client.get(params.word).await?;
         println!("Searched words list: {:#?}", searched_word);
 
         Ok(SentenceViewerTemplate {
@@ -245,9 +244,12 @@ async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, RouteE
 
     let csv_last_row_id = csv_rows.into_iter()
         .map(|f| f.csv_row_id)
-        .max()
-        .unwrap();
+        .max();
 
-    Ok(csv_last_row_id)
+    if let Some(id) = csv_last_row_id {
+        Ok(id)
+    } else {
+        Err(RouteError::LastCsvRowError)
+    }
 }
 

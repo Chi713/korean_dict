@@ -1,6 +1,5 @@
 use csv::{ReaderBuilder, WriterBuilder};
 use std::collections::HashMap;
-use std::error::Error;
 use std::iter::zip;
 use crate::routes::database::{self, CsvFileEntry};
 
@@ -17,7 +16,7 @@ impl CsvData {
     }
 }
 
-pub fn csv_parse(stream_data: &str) -> Result<CsvData, Box<dyn Error + Send + Sync>> {
+pub fn csv_parse(stream_data: &str) -> Result<CsvData, anyhow::Error> {
     let tags: Vec<String> = vec!["tag", "sq_marker", "audio", "picture", "tl_subs", "nl_subs"]
         .into_iter()
         .map(String::from)
@@ -30,7 +29,9 @@ pub fn csv_parse(stream_data: &str) -> Result<CsvData, Box<dyn Error + Send + Sy
         .from_reader(stream_data.as_bytes());
 
     for result in rdr.into_records() {
-        let result: Vec<String> = result?.iter().map(String::from).collect();
+        let result: Vec<String> = result?.iter()
+            .map(String::from)
+            .collect();
         let iter = zip(tags.to_owned(), result);
         let res: HashMap<String, String> = HashMap::from_iter(iter);
         csv_res.push(res);
@@ -38,7 +39,7 @@ pub fn csv_parse(stream_data: &str) -> Result<CsvData, Box<dyn Error + Send + Sy
     Ok(CsvData::new(csv_res))
 }
 
-pub fn build_csv_file(rows: Vec<database::CsvFileEntry>) -> Result<String, Box<dyn Error>> {
+pub fn build_csv_file(rows: Vec<database::CsvFileEntry>) -> Result<String, anyhow::Error> {
     let mut wtr = WriterBuilder::new().from_writer(vec![]);
 
     for entry in rows {
