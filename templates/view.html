@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
+    {%if hidden%}
+    <h2 style="background-color: rgba(255, 165, 0, 0.5)" >This is a hidden flashcard</3>
+    {% endif %}
     <h2>{{tl_sentence}}</h2>
     <h3>{{nl_sentence}}</h3>
 
@@ -15,39 +18,41 @@
 		>{{word.word}}</strong>
 	    <ol hx-get="sentence-viewer?word={{word.word}}"
 		hx-trigger="load">
-		<img src="loading.svg" class="htmx-indicator" style="fill: black">
-		<!-- <p class="htmx-indicator">loading in from dictionary...</p> -->
+		<img src="loading.svg" class="htmx-indicator" alt="loading in from dictionary..." style="fill: black">
 	    </ol>
 	</li>
 	{% endfor %}
     </ul>
 
     <div>
-	{% if sentence_order != 1 %}
-	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order-1}}" 
+	{% match prev_row_order %}
+	{% when Some with (prev_row) %}
+	<button hx-get="view?csv_id={{csv_id}}&row_order={{prev_row}}" 
 	    hx-target="body"
 	    hx-swap="outerHTML"
 	    hx-push-url="true"
 	    >
 	    prev
 	</button>
-	{% endif %}
-	
-	{% if csv_row_id != last_csv_row_id %}
-	<button hx-get="view?csv_id={{csv_id}}&sentence={{sentence_order+1}}"
+	{% when None %}
+	{% endmatch %}
+
+	{% match next_row_order %}
+	{% when Some with (next_row) %}
+	<button hx-get="view?csv_id={{csv_id}}&row_order={{next_row}}"
 	    hx-target="body"
 	    hx-swap="outerHTML"
 	    hx-push-url="true"
 	    >
 	    next
 	</button>
-	{% else %}
+	{% when None %}
 	<a href="get-file?csv_id={{csv_id}}"
 	   hx-boost="false"
 	   download
 	    >
 	    finish
 	</a>
-	{% endif %}
+	{% endmatch %}
     </div>
 {% endblock content %}

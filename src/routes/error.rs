@@ -13,6 +13,8 @@ pub enum RouteError {
     SqlxError(#[from] sqlx::Error),
     #[error("failed to get last csv row error")]
     LastCsvRowError,
+    #[error("page not found")]
+    PageNotFound,
     #[error("transparent")]
     Unknown(#[from] anyhow::Error),
 }
@@ -22,13 +24,15 @@ impl IntoResponse for RouteError {
         let (status, error_message) = match self {
             RouteError::SqlxError(source) => {
                 error!("{}", source);
-                // please change error code if ever in prod ㅠㅠ
                 (StatusCode::INTERNAL_SERVER_ERROR, format!("the was an error retrieving data from database"))
             }
             RouteError::LastCsvRowError => {
                 error!("failed to get last csv row error");
-                // please change error code if ever in prod ㅠㅠ
                 (StatusCode::INTERNAL_SERVER_ERROR, format!("failed to get last csv row error"))
+            }
+            RouteError::PageNotFound => {
+                error!("failed to get last csv row error");
+                (StatusCode::NOT_FOUND, format!("failed to get last csv row error"))
             }
             RouteError::Unknown(source) => {
                 error!("{}", source);

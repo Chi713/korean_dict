@@ -1,6 +1,7 @@
 {% if flashcard_entry.word == "" %}
     <form id="flashcard_entry" autocomplete="off" >
 	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
+	<input type="hidden" name="row_order" id="row_order" value="{{row_order}}"/>
 	<label for="word">Word</label>
 	<input type="text" name="word" id="word" value="" required/>
 
@@ -23,6 +24,7 @@
     <form id="flashcard_entry" autocomplete="off"
 	>
 	<input type="hidden" name="csv_row_id" id="csv_row_id" value="{{csv_row_id}}"/>
+	<input type="hidden" name="row_order" id="row_order" value="{{row_order}}"/>
 	<label for="word">Word</label>
 	<input type="text" name="word" id="word" value="{{flashcard_entry.word}}" required/>
 

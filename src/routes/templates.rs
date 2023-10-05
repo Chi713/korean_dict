@@ -26,10 +26,12 @@ pub struct ViewTemplate {
     pub csv_id: u32,
     pub tl_sentence: String,
     pub nl_sentence: String,
-    pub sentence_order: u32,
+    pub row_order: u32,
     pub csv_row_id: u32,
     pub flashcard_entry: database::FlashcardEntriesEntry,
-    pub last_csv_row_id: u32,
+    pub prev_row_order: Option<u32>,
+    pub next_row_order: Option<u32>,
+    pub hidden: bool,
     pub words_list: Vec<FlaggedWord>,
     pub was_saved: FormSaved,
 }
@@ -45,6 +47,7 @@ pub struct SentenceViewerTemplate {
 pub struct FileFormTemplate { 
     pub csv_id: u32,
     pub csv_row_id: u32,
+    pub row_order: u32,
     pub flashcard_entry: database::FlashcardEntriesEntry,
     pub was_saved: FormSaved,
 }
