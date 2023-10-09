@@ -1,4 +1,4 @@
-use crate::parser::Parser as KrParser;
+use crate::parser::Parser as LangParser;
 use crate::parser::{LanguageParser, KhaiiiParser};
 use crate::routes::templates::{FileFormTemplate, FlaggedWord};
 use crate::search::Session;
@@ -6,7 +6,6 @@ use super::database;
 use super::templates::{ViewTemplate, SentenceViewerTemplate, FormSaved};
 use super::error::RouteError;
 use anyhow::Context;
-use log::info;
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use axum::{
@@ -29,36 +28,38 @@ pub fn view() -> Router<SqlitePool> {
     ) -> Result<impl IntoResponse, RouteError> {
         let csv_id = params.csv_id;
 
+        // this should double check that a given row order is in bounds
         let csv_row = match params.row_order {
             Some(row_order) => {
                 get_csv_row_by_row_order(csv_id, row_order, &db).await?
             },
             None => {
-                // unwrap is happening because flashcard could be empty, handle properly later
-                get_current_flashcard(csv_id, &db).await?.unwrap()
+                // unwrap is happening because flashcard file could be empty, handle properly later
+                get_next_flashcard(csv_id, 0, &db).await?.unwrap()
             }
         };
 
-        let flashcard_entry = sqlx::query_as::<_,database::FlashcardEntriesEntry>(r#"
+        let flashcard_entry = sqlx::query_as::<_, database::FlashcardEntriesEntry>(r#"
                 SELECT flashcard_entries_id, csv_row_id, word, definition
                 FROM flashcard_entries WHERE csv_row_id = ?;"#)
             .bind(&csv_row.csv_row_id)
             .fetch_optional(&db)
-            .await?;
+            .await?
+            .unwrap_or_default();
 
         // parse sentence
-        let parser = KrParser::new(KhaiiiParser::new());
+        let parser = LangParser::new(KhaiiiParser::new());
         let parsed_sentence = parser.parser.parse(&csv_row.tl_subs)?;
         let filtered_sentence = filter_sentence(parsed_sentence, &db).await?;
 
-        let prev_row_order = get_prev_flashcard(csv_row.csv_row_id, &db)
+        let prev_row_order = get_prev_flashcard(csv_id, csv_row.row_order, &db)
             .await
-            .context("error getting prev row")?;
-        let next_row_order = get_next_flashcard(csv_row.csv_row_id, &db)
+            .context("error getting prev row")?
+            .map(|r| r.row_order);
+        let next_row_order = get_next_flashcard(csv_id, csv_row.row_order, &db)
             .await
-            .context("error getting next row")?;
-
-        let flashcard = flashcard_entry.unwrap_or_default();
+            .context("error getting next row")?
+            .map(|r| r.row_order);
 
         Ok(ViewTemplate {
             csv_id,
@@ -66,7 +67,7 @@ pub fn view() -> Router<SqlitePool> {
             tl_sentence: csv_row.tl_subs,
             nl_sentence: csv_row.nl_subs,
             row_order: csv_row.row_order,
-            flashcard_entry: flashcard,
+            flashcard_entry,
             prev_row_order,
             next_row_order,
             hidden: filtered_sentence.is_empty(),
@@ -130,7 +131,7 @@ pub fn flashcard_entry_post() -> Router<SqlitePool>{
             .fetch_one(&db)
             .await?;
 
-        let csv_row = get_csv_row_by_id(data.row_order, &db).await?;
+        let csv_row = get_csv_row_by_id(data.csv_row_id, &db).await?;
 
         Ok(FileFormTemplate {
             csv_id: csv_row.csv_id,
@@ -206,66 +207,58 @@ pub fn flashcard_entry_delete() -> Router<SqlitePool>{
 }
 
 async fn get_csv_row_by_id(csv_row_id: u32, db: &SqlitePool) -> Result<database::CsvRowEntry, RouteError> {
-
-        Ok(sqlx::query_as::<_,database::CsvRowEntry>(r#"
-                SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
-                FROM csv_row WHERE csv_row_id = ? ;"#)
-            .bind(csv_row_id)
-            .fetch_one(db)
-            .await?)
+    Ok(sqlx::query_as::<_,database::CsvRowEntry>(r#"
+            SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
+            FROM csv_row WHERE csv_row_id = ? ;"#)
+        .bind(csv_row_id)
+        .fetch_one(db)
+        .await?)
 }
 
 async fn get_csv_row_by_row_order(
-    csv_id: u32, 
-    row_order: u32, 
-    db: &SqlitePool
+    csv_id: u32, row_order: u32, db: &SqlitePool
 ) -> Result<database::CsvRowEntry, RouteError> {
-
-        Ok(sqlx::query_as::<_,database::CsvRowEntry>(r#"
-                SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
-                FROM csv_row WHERE csv_id = ? AND row_order = ? ;"#)
-            .bind(csv_id)
-            .bind(row_order)
-            .fetch_one(db)
-            .await?)
+    Ok(sqlx::query_as::<_,database::CsvRowEntry>(r#"
+            SELECT csv_row_id, csv_id, row_order, tag, sq_marker, audio, picture, tl_subs, nl_subs
+            FROM csv_row WHERE csv_id = ? AND row_order = ? ;"#)
+        .bind(csv_id)
+        .bind(row_order)
+        .fetch_one(db)
+        .await?)
 
 }
 
-async fn get_last_csv_row_id(csv_id: u32, db: &SqlitePool) -> Result<u32, RouteError> {
+async fn get_last_csv_row_order(csv_id: u32, db: &SqlitePool) -> Result<u32, RouteError> {
     let csv_rows = sqlx::query_as::<_,database::CsvLastRowId>(r#"
-        SELECT csv_row_id
+        SELECT row_order
         FROM csv_row 
         WHERE csv_id = ? ;"#)
     .bind(csv_id)
     .fetch_all(db)
     .await?;
 
-    let csv_last_row_id = csv_rows.into_iter()
-        .map(|f| f.csv_row_id)
+    let csv_last_row_order = csv_rows.into_iter()
+        .map(|r| r.row_order)
         .max();
 
-    if let Some(id) = csv_last_row_id {
-        Ok(id)
+    if let Some(row_order) = csv_last_row_order {
+        Ok(row_order)
     } else {
         Err(RouteError::LastCsvRowError)
     }
 }
 
-async fn get_dup_words(word: &str, db: &SqlitePool) -> Result<Option<database::WordEntry>, RouteError> {
-    Ok(sqlx::query_as::<_,database::WordEntry>(r#"
-        SELECT word_id, csv_row_id, word, is_ignored
-        FROM words
-        WHERE word = ? ;
-    "#)
-    .bind(word)
-    .fetch_optional(db)
-    .await?)
-}
-
 async fn filter_sentence(sentence: Vec<String>, db: &SqlitePool ) -> Result<Vec<FlaggedWord>, RouteError> {
         let mut filtered_sentence: Vec<FlaggedWord> = vec![];
         for word in sentence {
-            let repeated_words = get_dup_words(&word, &db).await?;
+            let repeated_words = sqlx::query_as::<_,database::WordEntry>(r#"
+                SELECT word_id, csv_row_id, word, is_ignored
+                FROM words
+                WHERE word = ? ;
+            "#)
+            .bind(&word)
+            .fetch_optional(db)
+            .await?;
             
             let mut flagged_word = FlaggedWord::default();
             flagged_word.word = word;
@@ -281,105 +274,45 @@ async fn filter_sentence(sentence: Vec<String>, db: &SqlitePool ) -> Result<Vec<
     Ok(filtered_sentence)
 }
 
-async fn get_next_flashcard(current_row_id: u32, db: &SqlitePool) -> Result<Option<u32>, RouteError> {
-    
-    let mut csv_row = get_csv_row_by_id(current_row_id, db).await?;
-    let csv_id = csv_row.csv_id;
-    let mut current_row_order = csv_row.row_order;
-    let last_row_id = get_last_csv_row_id(csv_id, db).await?; 
+async fn get_next_flashcard(csv_id: u32, mut row_order: u32, db: &SqlitePool) -> Result<Option<database::CsvRowEntry>, RouteError> {
+    let last_row_order = get_last_csv_row_order(csv_id, db).await?; 
+    if row_order == last_row_order { return Ok(None); }
 
-    if csv_row.csv_row_id == last_row_id {
-        return Ok(None);
-    }
-
-    let mut next_row_id: Option<u32> = Option::default();
+    let mut csv_row: database::CsvRowEntry;
     loop {
-        current_row_order += 1;
-
-        csv_row = get_csv_row_by_row_order(csv_id, current_row_order, db).await?;
+        row_order += 1;
+        csv_row = get_csv_row_by_row_order(csv_id, row_order, db).await?;
        
-        let parser = KrParser::new(KhaiiiParser::new());
+        let parser = LangParser::new(KhaiiiParser::new());
         let parsed_sentence = parser.parser.parse(&csv_row.tl_subs)?;
         let filtered_sentence = filter_sentence(parsed_sentence, db).await?;
 
-        // check if filter sentence is empty and if so breaks loop
         if !filtered_sentence.is_empty() {
-            next_row_id = Some(csv_row.row_order);
-            break;
+            return Ok(Some(csv_row))
         }
-        // safety check if loop reaches final row
-        if csv_row.csv_row_id >= last_row_id {
-            break;
+        if csv_row.row_order >= last_row_order {
+            return Ok(None);
         }
     }
-    Ok(next_row_id)
 }
 
-async fn get_prev_flashcard(current_row_id: u32, db: &SqlitePool) -> Result<Option<u32>, RouteError> {
-    
-    let mut csv_row = get_csv_row_by_id(current_row_id, db).await?;
-    let csv_id = csv_row.csv_id;
-    let mut current_row_order = csv_row.row_order;
+async fn get_prev_flashcard(csv_id: u32, mut row_order: u32, db: &SqlitePool) -> Result<Option<database::CsvRowEntry>, RouteError> {
+    if row_order == 1 { return Ok(None); }
 
-    if current_row_order == 1 {
-        return Ok(None);
-    }
-
-    let mut next_row_id: Option<u32> = Option::default();
+    let mut csv_row: database::CsvRowEntry;
     loop {
-        current_row_order -= 1;
+        row_order -= 1;
+        csv_row = get_csv_row_by_row_order(csv_id, row_order, db).await?;
 
-        csv_row = get_csv_row_by_row_order(csv_id, current_row_order, db).await?;
-
-        let parser = KrParser::new(KhaiiiParser::new());
+        let parser = LangParser::new(KhaiiiParser::new());
         let parsed_sentence = parser.parser.parse(&csv_row.tl_subs)?;
         let filtered_sentence = filter_sentence(parsed_sentence, db).await?;
 
-        // check if filter sentence is empty and if so breaks loop
         if !filtered_sentence.is_empty() {
-            next_row_id = Some(csv_row.row_order);
-            break;
+            return Ok(Some(csv_row))
         }
-        // safety check if loop reaches initial row
         if csv_row.row_order <= 1 {
-            break;
+            return Ok(None);
         }
     }
-    Ok(next_row_id)
-}
-
-// fix when trying to access the last flashcard when it is hidden; last hidden row searched by url
-async fn get_current_flashcard(csv_id: u32, db: &SqlitePool) -> Result<Option<database::CsvRowEntry>, RouteError> {
-    
-    let mut csv_row = get_csv_row_by_row_order(csv_id, 1, db).await?;
-    let csv_id = csv_row.csv_id;
-    let mut current_row_order = csv_row.row_order;
-    let last_row_id = get_last_csv_row_id(csv_id, db).await?; 
-
-    if csv_row.csv_row_id == last_row_id {
-        return Ok(None);
-    }
-
-    let mut next_row: Option<database::CsvRowEntry> = Option::default();
-    loop {
-
-        csv_row = get_csv_row_by_row_order(csv_id, current_row_order, db).await?;
-
-        let parser = KrParser::new(KhaiiiParser::new());
-        let parsed_sentence = parser.parser.parse(&csv_row.tl_subs)?;
-        let filtered_sentence = filter_sentence(parsed_sentence, db).await?;
-
-        // check if filter sentence is empty and if so breaks loop
-        if !filtered_sentence.is_empty() {
-            next_row = Some(csv_row);
-            break;
-        }
-        // safety check if loop reaches final row
-        if csv_row.csv_row_id >= last_row_id {
-            break;
-        }
-
-        current_row_order += 1;
-    }
-    Ok(next_row)
 }
